@@ -1,0 +1,346 @@
+---
+title: "ReplikationSemR"
+author: "Felix Neubauer"
+date: "2026-04-20"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r libraries, include=FALSE}
+library(haven)
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+library(grid)
+```
+
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+
+```{r DataUrbantransitVorbereiten}
+# Datensatz einlesten
+urban <- read_dta("Data/UrbanTransitReports.dta")
+
+# Spaltennamen übersetzen
+urban_en <- urban %>%
+  rename(
+    year_rel = year,
+    city_id = id,
+    gdp = GDP
+  ) %>%
+  rename(
+    city = `城市`,
+    year = `年份`,
+    pop_10k = `年末总人口万`,
+    city_district_pop_10k = `市辖区年末总人口万`,
+    n_bus = `年末实有公共汽电车营运车辆数辆`,
+    bus_mileage_10k_km = `公共汽电车运营里程万公里`,
+    bus_ridership_10k = `公共汽电车客运量万人次`,
+    n_taxi = `出租汽车车辆数运营车数合计辆`,
+    taxi_mileage_10k_km = `出租汽车运营里程万公里`,
+    taxi_trips_10k = `出租汽车载客车次总数万车次`,
+    taxi_ridership_10k = `出租汽车客运量万人次`,
+    n_subway_vehicle = `轨道交通运营车数辆`,
+    n_subway_lines = `轨道交通运营线路条数合计条`,
+    subway_length_total_km = `轨道交通运营线路总长度公里`,
+    subway_length_km = `轨道交通运营线路长度公里`,
+    subway_mileage_10k_train_km = `轨道交通运营里程万列公里`,
+    subway_ridership_10k = `轨道交通客运量万人次`,
+    road_surface_10k_sqm = `年末实有城市道路面积万平方米`,
+    road_surface_per_capita_sqm = `人均城市道路面积平方米`,
+    n_civilian_cars_10k = `民用汽车拥有量万辆`,
+    n_private_cars_10k = `私人汽车拥有量万辆`,
+    district_gdp_per_capita_yuan = `人均地区生产总值元`,
+    urban_disposable_income_per_capita_yuan = `城镇居民人均可支配收入元`,
+    urban_consumption_expenditure_per_capita_yuan = `城镇居民人均生活消费性支出元`,
+    subway_open_year = `地铁开通年份`,
+    has_subway = `是否开通地铁`,
+    city_gdp_per_capita_yuan = `城市人均GDP`
+  )
+# Alle Städtenamen für Übersetzung raussuchen
+unique(urban_en$city)
+
+# Neue Spalte mit übersetzten Städtenamen und Reihenfolge für Übersichtlichkeit anpassen
+urban_en <- urban_en %>%
+  mutate(
+    city_en = recode(
+      city,
+      "上海" = "Shanghai",
+      "北京" = "Beijing",
+      "南京" = "Nanjing",
+      "南宁" = "Nanning",
+      "南昌" = "Nanchang",
+      "厦门" = "Xiamen",
+      "合肥" = "Hefei",
+      "哈尔滨" = "Harbin",
+      "大连" = "Dalian",
+      "天津" = "Tianjin",
+      "广州" = "Guangzhou",
+      "成都" = "Chengdu",
+      "昆明" = "Kunming",
+      "杭州" = "Hangzhou",
+      "武汉" = "Wuhan",
+      "沈阳" = "Shenyang",
+      "深圳" = "Shenzhen",
+      "石家庄" = "Shijiazhuang",
+      "福州" = "Fuzhou",
+      "西安" = "Xi'an",
+      "贵阳" = "Guiyang",
+      "郑州" = "Zhengzhou",
+      "重庆" = "Chongqing",
+      "长春" = "Changchun",
+      "长沙" = "Changsha"
+    )
+  ) %>%
+  relocate(city_en, .after = city)
+
+urban_en <- urban_en %>%
+  relocate(city_id, .before = city)
+
+```
+
+```{r DataSubwayLines}
+# Datensatz laden
+lines <- read_dta("Data/SubwayLines.dta")
+
+# Wie im Original Hong Kong entfernen
+lines_nohk <- lines %>%
+  filter(city != "Hong Kong")
+
+lines_nohk %>%
+  count(city, sort = TRUE)
+```
+
+
+```{r Fig1Vorbereiten}
+# Datensatz urban_en für Fig 1, zuerst irrelevante Spalten entfernen
+
+urban_fig1 <- urban_en %>%
+  select(city, city_en, year, subway_length_total_km, subway_ridership_10k)
+
+
+#  Aggregieren auf Jahresebene, Pendant zu diesem Stata Befehl: collapse (sum) subway_length subway_ridership, by(year)
+
+annual_temp <- urban_fig1 %>%
+  group_by(year) %>%
+  summarise(
+    subway_length = sum(subway_length_total_km, na.rm = TRUE),
+    subway_ridership = sum(subway_ridership_10k, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+
+# Im Vorbild ist die Ridership in Millionen angegeben, deswegen müssen die Werte umgerechnet werden
+
+annual_temp <- annual_temp %>%
+  mutate(
+    subway_ridership = subway_ridership / 100
+  )
+
+
+# Jahr 2009 entfernen, da es keine Ridership enthält, Datenfehler?
+
+annual_temp <- annual_temp %>%
+  filter(year != 2009)
+
+
+
+
+# der Rest der Daten kommt aus SubwayLines.dta, hier lines_nohk
+# Wir beginnen damit, für jedes Eröffnungsjahr die neu hinzugekommene Streckenlänge aufzusummieren
+
+lines_year <- lines_nohk %>%
+  group_by(openyear) %>%
+  summarise(
+    lengthkm = sum(lengthkm, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  arrange(openyear)
+
+# Daraus bilden wir die laufende kumulative Summe, sprich die tatsächliche Länge für jedes Jahr
+lines_year <- lines_year %>%
+  mutate(
+    subway_length2 = cumsum(lengthkm)
+  )
+
+
+# für merge openyear in year umbenennen
+
+lines_year <- lines_year %>%
+  rename(year = openyear) %>%
+  select(year, subway_length2)
+
+
+```
+
+```{r merge fig1}
+# Die beiden vorbereiteten Datensätze werden zusammengefügt, full join, damit keine Daten verloren gehen
+
+fig1_df <- full_join(lines_year, annual_temp, by = "year") %>%
+  arrange(year)
+
+
+# NA Werte statt 0 wie im Stata Code
+
+fig1_df <- fig1_df %>%
+  mutate(
+    subway_ridership = na_if(subway_ridership, 0),
+    subway_length = na_if(subway_length, 0)
+  )
+
+
+# Labels von Vorbild Grafik übernehmen
+
+fig1_df <- fig1_df %>%
+  mutate(
+    NCities = case_when(
+      year == 2000 ~ "4 cities",
+      year == 2017 ~ "30 cities",
+      TRUE ~ NA_character_
+    )
+  )
+
+
+# wie in originaler Grafik Begrenzung auf Jahre ab 2000
+plot_df <- fig1_df %>%
+  filter(year >= 2000, year <= 2017)
+
+```
+
+```{r plotfig1}
+# ggplot benötigt einen skalierungsfaktor für die rechte achse
+scale_factor <- 3.2
+
+
+# Plot erstellen
+
+p_fig1 <- ggplot(plot_df, aes(x = year)) +
+  geom_line(
+    # Graph Ridership
+    data = plot_df %>% filter(year >= 2002, !is.na(subway_ridership)),
+    aes(y = subway_ridership, color = "ridership"),
+    linewidth = 1.1,
+    lineend = "round"
+  ) +
+  geom_line(
+    # Graph Length
+    data = plot_df %>% filter(year >= 2002, !is.na(subway_length2)),
+    aes(y = subway_length2 * scale_factor, color = "length"),
+    linewidth = 1.1,
+    linetype = "31"
+  ) +
+  # Achsen und Skalen konfigurieren und Skalenstriche hinzufügen
+  scale_x_continuous(
+    breaks = c(2000, 2005, 2010, 2015, 2020),
+    limits = c(2000, 2020)
+  ) +
+  scale_y_continuous(
+    name = "total ridership (million)",
+    breaks = c(0, 5000, 10000, 15000),
+    limits = c(0, 16000),
+    sec.axis = sec_axis(
+      ~ . / scale_factor,
+      name = "total length (km)",
+      breaks = c(0, 1000, 2000, 3000, 4000, 5000)
+    )
+  ) +
+  # Farben mit Hexpicker aus Original übernommen
+  scale_color_manual(
+    values = c("ridership" = "#6d8d84", "length" = "#90343a"),
+    breaks = c("ridership", "length")
+  ) +
+  # X-Achse beschriftung
+  labs(
+    x = "year",
+    color = NULL
+  ) +
+  # Labels aus Original für Anzahl der Städte 2002 und 2017
+  geom_text(
+    data = tibble(
+      x = c(2000.2, 2017.5),
+      y = c(236 * scale_factor + 100, 4476 * scale_factor + 100),
+      label = c("4 cities", "30 cities")
+    ),
+    aes(x = x, y = y, label = label),
+    inherit.aes = FALSE,
+    color = "black",
+    size = 2.8,
+    hjust = 0,
+    vjust = c(-0.1, -0.15)
+  ) +
+  # Legende hinzugefügt
+  guides(
+    color = guide_legend(
+      nrow = 1,
+      byrow = TRUE,
+      override.aes = list(
+        linewidth = c(1.3, 1.3),
+        linetype = c("solid", "dashed")
+      )
+    )
+  ) +
+  # Theme mit Farben, Positionen und vertikalen Skalenbeschriftungen
+  theme_classic(base_size = 12) +
+  theme(
+    legend.position = "bottom",
+    legend.direction = "horizontal",
+    legend.key.width = unit(2.4, "cm"),
+    legend.key.height = unit(0.6, "cm"),
+    legend.background = element_rect(color = "black", fill = "white", linewidth = 0.4),
+    legend.box.background = element_rect(color = "black", fill = "white", linewidth = 0.4),
+    legend.margin = margin(6, 10, 6, 10),
+  
+    panel.border = element_blank(),
+    panel.grid.major.y = element_line(color = "grey90", linewidth = 0.3),
+    panel.grid.minor = element_blank(),
+  
+    axis.line.x.bottom = element_line(color = "black"),
+    axis.line.y.left = element_line(color = "black"),
+    axis.line.y.right = element_line(color = "black"),
+    axis.line.x.top = element_blank(),
+    
+    axis.text.y = element_text(angle = 90, vjust = 0.5, hjust = 0.5),
+    axis.text.y.right = element_text(angle = 90, vjust = 0.5, hjust = 0.5),
+  
+    axis.title.y.right = element_text(
+      angle = 90,
+      margin = margin(l = 12)
+    ),
+    # Aspect Ratio vom Original übernommen
+    aspect.ratio = 0.674
+  )
+
+p_fig1
+
+# Grafik als png speichern
+ggsave(
+  filename = "FertigeGrafiken/Fig1_R.png",
+  plot = p_fig1
+)
+
+
+```
+
+

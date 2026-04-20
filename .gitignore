@@ -1,0 +1,14 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+Data/ExtendSample.dta
+Data/RushNonrusHours.dta
+Data/WithAgainstTraffic.dta
+Data/linkInfo_new.dta
+Data/2017_part18.dta
+Data/HourlySample.dta
+Data\2017_part18.dta
+Data\ExtendSample.dta
+Data\linkInfo_new.dta
+Data\RushNonrusHours.dta
