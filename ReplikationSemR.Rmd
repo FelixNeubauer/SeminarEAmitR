@@ -1,12 +1,12 @@
 ---
-title: "ReplikationSemR"
+title: "Subways and Road Congestion"
+subtitle: "Seminar Empirische Analysen mit R"
 author: "Felix Neubauer"
-date: "2026-04-20"
 output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = FALSE, warnings = FALSE, messages = FALSE)
 ```
 
 ```{r libraries, include=FALSE}
@@ -15,31 +15,18 @@ library(dplyr)
 library(ggplot2)
 library(tidyr)
 library(grid)
+library(lubridate)
 ```
 
 
 ## R Markdown
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
-```
-
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
-```
-
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
 
 
-```{r DataUrbantransitVorbereiten}
+
+
+
+```{r DataUrbantransitVorbereiten, echo=FALSE, include = FALSE}
 # Datensatz einlesten
 urban <- read_dta("Data/UrbanTransitReports.dta")
 
@@ -121,7 +108,7 @@ urban_en <- urban_en %>%
 
 ```
 
-```{r DataSubwayLines}
+```{r DataSubwayLines, include= FALSE}
 # Datensatz laden
 lines <- read_dta("Data/SubwayLines.dta")
 
@@ -134,7 +121,7 @@ lines_nohk %>%
 ```
 
 
-```{r Fig1Vorbereiten}
+```{r Fig1Vorbereiten, echo=FALSE}
 # Datensatz urban_en für Fig 1, zuerst irrelevante Spalten entfernen
 
 urban_fig1 <- urban_en %>%
@@ -195,7 +182,7 @@ lines_year <- lines_year %>%
 
 ```
 
-```{r merge fig1}
+```{r merge fig1, echo=FALSE}
 # Die beiden vorbereiteten Datensätze werden zusammengefügt, full join, damit keine Daten verloren gehen
 
 fig1_df <- full_join(lines_year, annual_temp, by = "year") %>%
@@ -229,7 +216,7 @@ plot_df <- fig1_df %>%
 
 ```
 
-```{r plotfig1}
+```{r plotfig1, echo=FALSE}
 # ggplot benötigt einen skalierungsfaktor für die rechte achse
 scale_factor <- 3.2
 
@@ -333,7 +320,9 @@ p_fig1 <- ggplot(plot_df, aes(x = year)) +
   )
 
 p_fig1
+```
 
+```{r fig1_save, include=FALSE}
 # Grafik als png speichern
 ggsave(
   filename = "FertigeGrafiken/Fig1_R.png",
@@ -344,3 +333,190 @@ ggsave(
 ```
 
 
+
+```{r grafik1_daten}
+
+data_grafik1_monat <- read_dta("Data/data_table1.dta") %>%
+  mutate(
+    panel = factor(
+      panel,
+      levels = c("Panel A", "Panel B", "Panel C")
+    ),
+    
+    opening_year = as.integer(opening_year),
+    
+    opening_month = if_else(
+      date_precision == "day",
+      as.integer(month(opening_date)),
+      NA_integer_
+    ),
+    
+    # reine Jahresangaben als eigener Stapel rechts neben Dezember
+    x_plot = if_else(
+      date_precision == "year",
+      14L,
+      opening_month
+    ),
+    
+    line_status = case_when(
+      panel == "Panel A" ~ "Newly opened lines\nAug 2016–Dec 2017",
+      panel %in% c("Panel B", "Panel C") & opening_year <= 2017 ~ "Existing lines\nopening year ≤ 2017",
+      panel %in% c("Panel B", "Panel C") & opening_year >= 2018 ~ "Planned lines\nopening year ≥ 2018",
+      TRUE ~ NA_character_
+    ),
+    
+    line_status = factor(
+      line_status,
+      levels = c(
+        "Newly opened lines\nAug 2016–Dec 2017",
+        "Existing lines\nopening year ≤ 2017",
+        "Planned lines\nopening year ≥ 2018"
+      )
+    )
+  ) %>%
+  filter(!is.na(x_plot), !is.na(line_status))
+
+# Manueller Stapel:
+# unten Panel A, darüber Panel B, darüber Panel C
+data_grafik1_monat_stack <- data_grafik1_monat %>%
+  count(x_plot, panel, line_status, name = "n") %>%
+  filter(n > 0) %>%
+  group_by(x_plot) %>%
+  arrange(panel, line_status, .by_group = TRUE) %>%
+  mutate(y_start = lag(cumsum(n), default = 0)) %>%
+  uncount(n, .id = "dot_id") %>%
+  mutate(y = y_start + dot_id) %>%
+  ungroup()
+
+max_y <- max(data_grafik1_monat_stack$y, na.rm = TRUE)
+
+
+```
+
+
+```{r grafik1, fig.width=12, fig.height=9.5, out.width="73%", dpi=50, dev="png", fig.align="left"}
+plot_data_grafik1_monat <- ggplot(
+  data_grafik1_monat_stack,
+  aes(x = x_plot, y = y, fill = panel, shape = line_status)
+) +
+  geom_point(
+    size = 6.1,
+    color = "white",
+    stroke = 0.35,
+    alpha = 0.95
+  ) +
+  scale_fill_manual(
+    name = "Sample group",
+    values = c(
+      "Panel A" = "#90343a",
+      "Panel B" = "#6d8d84",
+      "Panel C" = "#7D8DCA"
+    ),
+    labels = c(
+      "Panel A: new subway lines",
+      "Panel B: existing or planned subway lines in treated cities",
+      "Panel C: existing or planned subway lines in control cities"
+    )
+  ) +
+  scale_shape_manual(
+    name = "\nLine status",
+    values = c(
+      "Newly opened lines\nAug 2016–Dec 2017" = 21,
+      "Existing lines\nopening year ≤ 2017" = 22,
+      "Planned lines\nopening year ≥ 2018" = 24
+    ),
+    labels = c(
+      "Newly opened lines",
+      "Existing lines",
+      "Planned lines"
+    )
+  ) +
+  scale_x_continuous(
+    limits = c(0.5, 14.5),
+    breaks = c(1:12, 14),
+    labels = c(
+      "Jan", "Feb", "Mär", "Apr", "Mai", "Jun",
+      "Jul", "Aug", "Sep", "Okt", "Nov", "Dez",
+      "Nur Jahr"
+    ),
+    expand = c(0.02, 0)
+  ) +
+  coord_cartesian(
+    ylim = c(0.5, max_y + 1.8),
+    expand = FALSE,
+    clip = "off"
+  ) +
+  labs(
+    title = "Opening dates of subway lines in the sample",
+    subtitle = "Exact opening dates aggregated by month; year-only entries shown separately",
+    x = NULL,
+    y = NULL
+  ) +
+  guides(
+  fill = guide_legend(
+    ncol = 1,
+    byrow = TRUE,
+    order = 1,
+    title.position = "top",
+    title.hjust = 0,
+    label.hjust = 0,
+    override.aes = list(shape = 21, size = 5)
+  ),
+  shape = guide_legend(
+    ncol = 1,
+    byrow = TRUE,
+    order = 2,
+    title.position = "top",
+    title.hjust = 0,
+    label.hjust = 0,
+    override.aes = list(fill = "grey70", size = 5)
+  )
+) +
+theme_minimal(base_size = 15) +
+theme(
+  panel.grid.minor = element_blank(),
+  panel.grid.major.y = element_blank(),
+  axis.text.y = element_blank(),
+  axis.ticks.y = element_blank(),
+
+  plot.title = element_text(
+    hjust = 0.5,
+    size = 30,
+    face = "bold"
+  ),
+  plot.subtitle = element_text(
+    hjust = 0.5,
+    size = 20
+  ),
+
+  axis.text.x = element_text(size = 18),
+
+  # Legenden nebeneinander
+  legend.position = "bottom",
+  legend.box = "horizontal",
+  legend.direction = "vertical",
+  legend.justification = "left",
+  legend.box.just = "left",
+
+  # Abstand zwischen Sample group und Line status
+  legend.spacing.x = unit(60, "pt"),
+
+  legend.title = element_text(
+    size = 18,
+    face = "bold",
+    hjust = 0
+  ),
+  legend.text = element_text(
+    size = 16,
+    hjust = 0,
+    lineheight = 1
+  ),
+  legend.key.size = unit(0.65, "cm"),
+  legend.spacing.y = unit(6, "pt"),
+  legend.box.spacing = unit(2, "pt"),
+
+  plot.margin = margin(12, 30, 12, 30)
+)
+
+plot_data_grafik1_monat
+```
