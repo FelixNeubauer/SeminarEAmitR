@@ -17,6 +17,7 @@ library(tidyr)
 library(grid)
 library(lubridate)
 library(knitr)
+library(kableExtra)
 ```
 
 
@@ -696,46 +697,308 @@ table2_panel_b <- table2_panel_b_raw %>%
   )
 ```
 
-```{r table2_panel_a_table}
-table2_panel_a %>%
-  rename(
-    "Characteristic" = variable,
-    "Treated: mean" = treated_mean,
-    "Treated: p25" = treated_p25,
-    "Treated: median" = treated_median,
-    "Treated: p75" = treated_p75,
-    "Control: mean" = control_mean,
-    "Control: p25" = control_p25,
-    "Control: median" = control_median,
-    "Control: p75" = control_p75
+```{r table2_original_kableextra, results='asis', echo=FALSE, message=FALSE, warning=FALSE}
+library(kableExtra)
+
+# Labels etwas näher am Original
+panel_a_out <- table2_panel_a %>%
+  mutate(
+    variable = recode(
+      variable,
+      "population (million)" = "Population (million)",
+      "GDP per capita (yuan)" = "GDP per capita (yuan)"
+    )
   ) %>%
-  kable(
-    caption = paste0(
-      "Table 2, Panel A: City level characteristics ",
-      "(treated cities N = ", table2_n_treated,
-      "; control cities N = ", table2_n_control, ")"
+  transmute(
+    variable,
+    t1 = treated_mean,
+    t2 = treated_p25,
+    t3 = treated_median,
+    t4 = treated_p75,
+    gap = "",
+    c1 = control_mean,
+    c2 = control_p25,
+    c3 = control_median,
+    c4 = control_p75
+  )
+
+panel_b_out <- table2_panel_b %>%
+  mutate(
+    road_type = recode(
+      road_type,
+      "all road segments" = "All road segments",
+      "highways" = "Highways",
+      "urban expressways" = "Urban expressways",
+      "arterial streets" = "Arterial streets",
+      "sub-arterial streets" = "Subarterial streets"
+    )
+  ) %>%
+  transmute(
+    variable = road_type,
+    t1 = treated_n_obs,
+    t2 = treated_n_segments,
+    t3 = treated_avg_speed,
+    t4 = treated_avg_congestion_index,
+    gap = "",
+    c1 = control_n_obs,
+    c2 = control_n_segments,
+    c3 = control_avg_speed,
+    c4 = control_avg_congestion_index
+  )
+
+# Eine gemeinsame Tabelle bauen
+table2_out <- bind_rows(
+  tibble(
+  variable = '<span class="panel-label">Panel A. City-level characteristics</span>',
+  t1 = "", t2 = "", t3 = "", t4 = "",
+  gap = "",
+  c1 = "", c2 = "", c3 = "", c4 = ""
+  ),
+  panel_a_out,
+  tibble(
+  variable = "",
+  t1 = "Observations",
+  t2 = "Number<br>of unique<br>segments",
+  t3 = "Average<br>speed<br>(km/h)",
+  t4 = "Average<br>congest.<br>index",
+  gap = "",
+  c1 = "Observations",
+  c2 = "Number<br>of unique<br>segments",
+  c3 = "Average<br>speed<br>(km/h)",
+  c4 = "Average<br>congest.<br>index"
+  ),
+  tibble(
+  variable = '<span class="panel-label">Panel B. Road speed and congestion</span>',
+  t1 = "", t2 = "", t3 = "", t4 = "",
+  gap = "",
+  c1 = "", c2 = "", c3 = "", c4 = ""
+  ),
+  panel_b_out
+)
+
+kable(
+  table2_out,
+  format = "html",
+  escape = FALSE,
+  align = c("l", rep("c", 4), "c", rep("c", 4)),
+  col.names = c(
+    "",
+    "Mean", "p25", "Median", "p75",
+    "",
+    "Mean", "p25", "Median", "p75"
+  ),
+  table.attr = 'class="table2-original"'
+) %>%
+  add_header_above(
+    setNames(
+      c(1, 4, 1, 4),
+      c(
+        " ",
+        paste0("Treated cities (<em>N</em> = ", table2_n_treated, ")"),
+        " ",
+        paste0("Control cities (<em>N</em> = ", table2_n_control, ")")
+      )
     ),
-    align = c("l", rep("r", 8))
-  )
-```
-
-```{r table2_panel_b_table}
-table2_panel_b %>%
-  rename(
-    "Road type" = road_type,
-    "Treated: # obs." = treated_n_obs,
-    "Treated: # segments" = treated_n_segments,
-    "Treated: avg. speed (km/h)" = treated_avg_speed,
-    "Treated: avg. congest. index" = treated_avg_congestion_index,
-    "Control: # obs." = control_n_obs,
-    "Control: # segments" = control_n_segments,
-    "Control: avg. speed (km/h)" = control_avg_speed,
-    "Control: avg. congest. index" = control_avg_congestion_index
+    escape = FALSE,
+    line = FALSE
   ) %>%
-  kable(
-    caption = "Table 2, Panel B: Road speed and congestion",
-    align = c("l", rep("r", 8))
+  kable_styling(
+    full_width = FALSE,
+    position = "center",
+    bootstrap_options = NULL,
+    font_size = 18,
+    html_font = "Times New Roman"
+  ) %>%
+  row_spec(0, bold = FALSE) %>%
+  row_spec(1, italic = TRUE, extra_css = "text-align: left;") %>%
+  row_spec(4, extra_css = "border-top: 24px solid white; border-bottom: 1.5px solid #222;") %>%
+  row_spec(5, italic = TRUE, extra_css = "text-align: left;") %>%
+  column_spec(1, width = "250px") %>%
+  column_spec(2:5, width = "95px") %>%
+  column_spec(6, width = "30px") %>%
+  column_spec(7:10, width = "95px") %>%
+  footnote(
+    general = paste0(
+      "Data in panel A are from the 2017 Statistical Yearbook of Chinese Cities. ",
+      "In panel B, each observation is a road segment-by-week-to-opening. ",
+      "Segments in the baseline regression sample are included. ",
+      "Treated road segments are those directly affected by the new subway lines. ",
+      "Week-to-opening is between 6 weeks before and 48 weeks after line opening."
+    ),
+    general_title = "Notes:",
+    escape = FALSE,
+    footnote_as_chunk = TRUE
   )
 ```
 
-*Note:* Data in Panel A are from the 2017 Statistical Yearbook of Chinese Cities. In Panel B, each observation is a road segment-by-week-to-opening. Segments in the baseline regression sample are included. Treated road segments are those directly affected by the new subway lines. Week-to-opening is between 6 weeks before and 48 weeks after line opening.
+
+```{css, echo=FALSE}
+
+/* Grundlayout */
+.table2-original {
+  width: 1000px !important;
+  max-width: 100% !important;
+  table-layout: fixed !important;
+  border-collapse: collapse !important;
+  border-top: 2px solid #222 !important;
+  border-bottom: 2px solid #222 !important;
+  margin-top: 10px !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  font-family: "Times New Roman", Times, serif !important;
+}
+
+/* Caption ausblenden */
+.table2-original caption {
+  display: none !important;
+}
+
+/* Alle Bootstrap-/kableExtra-Standardlinien entfernen */
+.table2-original.table > :not(caption) > * > *,
+.table2-original th,
+.table2-original td {
+  border-top: none !important;
+  border-bottom: none !important;
+  border-left: none !important;
+  border-right: none !important;
+  box-shadow: none !important;
+  background-color: transparent !important;
+}
+
+/* Zellen allgemein */
+.table2-original th,
+.table2-original td {
+  padding: 3px 8px !important;
+  line-height: 1.08 !important;
+  overflow: visible !important;
+  vertical-align: middle !important;
+  font-weight: normal !important;
+}
+
+/* Linke Spalte schmal halten */
+.table2-original th:first-child,
+.table2-original td:first-child {
+  width: 180px !important;
+  min-width: 180px !important;
+  max-width: 180px !important;
+  text-align: left !important;
+  position: relative !important;
+}
+
+/* Alle anderen Spalten zentrieren */
+.table2-original th:not(:first-child),
+.table2-original td:not(:first-child) {
+  text-align: center !important;
+}
+
+/* Gap-Spalte zwischen treated und control */
+.table2-original th:nth-child(6),
+.table2-original td:nth-child(6) {
+  width: 34px !important;
+  min-width: 34px !important;
+  max-width: 34px !important;
+  padding-left: 10px !important;
+  padding-right: 10px !important;
+  border-top: none !important;
+  border-bottom: none !important;
+}
+
+/* Header: keine automatischen Linien */
+.table2-original thead th {
+  border-top: none !important;
+  border-bottom: none !important;
+  font-weight: normal !important;
+}
+
+/* Kurze Linien unter Treated cities / Control cities */
+.table2-original thead tr:first-child th:nth-child(2),
+.table2-original thead tr:first-child th:nth-child(4) {
+  border-bottom: 1.5px solid #222 !important;
+}
+
+/* Linie unter Mean / p25 / Median / p75 */
+.table2-original thead tr:nth-child(2) th:not(:first-child):not(:nth-child(6)) {
+  border-bottom: 1.5px solid #222 !important;
+}
+
+/* Keine Linie in der linken Header-Zelle und in der Gap-Spalte */
+.table2-original thead tr:first-child th:nth-child(1),
+.table2-original thead tr:first-child th:nth-child(3),
+.table2-original thead tr:nth-child(2) th:nth-child(1),
+.table2-original thead tr:nth-child(2) th:nth-child(6) {
+  border-bottom: none !important;
+}
+
+/* Panel-A-/Panel-B-Labels: ragen optisch in die Tabelle hinein,
+   vergrößern aber NICHT die erste Spalte */
+.table2-original .panel-label {
+  position: absolute !important;
+  left: 0 !important;
+  bottom: 2px !important;
+  white-space: nowrap !important;
+  font-style: italic !important;
+  font-weight: normal !important;
+  width: max-content !important;
+  z-index: 5 !important;
+  pointer-events: none !important;
+}
+
+/* Panel-Zeilen */
+.table2-original tbody tr:nth-child(1) td,
+.table2-original tbody tr:nth-child(5) td {
+  height: 24px !important;
+  padding-top: 0 !important;
+  padding-bottom: 2px !important;
+  vertical-align: bottom !important;
+  font-style: italic !important;
+}
+
+/* Besonders Panel B untenbündig */
+.table2-original tbody tr:nth-child(5) td {
+  vertical-align: bottom !important;
+  padding-top: 0 !important;
+  padding-bottom: 2px !important;
+}
+
+/* Road-segment-Überschriften nicht fett */
+.table2-original tbody tr:nth-child(4) td {
+  font-weight: normal !important;
+  vertical-align: bottom !important;
+}
+
+/* Linie oberhalb und unterhalb der Panel-B-Spaltenüberschriften */
+.table2-original tbody tr:nth-child(4) td:not(:nth-child(6)) {
+  border-top: 1.5px solid #222 !important;
+  border-bottom: 1.5px solid #222 !important;
+  padding-top: 12px !important;
+  padding-bottom: 7px !important;
+}
+
+/* Keine Linie in der Gap-Spalte bei Panel-B-Überschriften */
+.table2-original tbody tr:nth-child(4) td:nth-child(6) {
+  border-top: none !important;
+  border-bottom: none !important;
+}
+
+/* Notes */
+.table2-original tfoot td {
+  border-top: 2px solid #222 !important;
+  font-size: 17px !important;
+  line-height: 1.18 !important;
+  text-align: left !important;
+  padding-top: 8px !important;
+  font-weight: normal !important;
+}
+
+.table2-original tfoot {
+  font-weight: normal !important;
+}
+
+/* Auch fett gesetzte Inhalte überschreiben */
+.table2-original strong,
+.table2-original b {
+  font-weight: normal !important;
+}
+```
+
+
