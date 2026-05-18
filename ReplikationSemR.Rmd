@@ -16,6 +16,7 @@ library(ggplot2)
 library(tidyr)
 library(grid)
 library(lubridate)
+library(knitr)
 ```
 
 
@@ -555,13 +556,6 @@ stata_quantile <- function(x, probs) {
   # und vermeidet Interpolation zwischen zwei Städten.
   as.numeric(quantile(x, probs = probs, na.rm = TRUE, type = 1, names = FALSE))
 }
-
-html_escape <- function(x) {
-  x <- gsub("&", "&amp;", x, fixed = TRUE)
-  x <- gsub("<", "&lt;", x, fixed = TRUE)
-  x <- gsub(">", "&gt;", x, fixed = TRUE)
-  x
-}
 ```
 
 ```{r table2_panel_a, include=FALSE}
@@ -702,49 +696,46 @@ table2_panel_b <- table2_panel_b_raw %>%
   )
 ```
 
-```{r table2_render, results='asis'}
-cat('<style>\n')
-cat('.table2-replication { border-collapse: collapse; width: 100%; font-size: 0.9em; }\n')
-cat('.table2-replication th, .table2-replication td { padding: 4px 6px; }\n')
-cat('.table2-replication thead tr:first-child th { border-top: 2px solid #000; }\n')
-cat('.table2-replication thead tr:last-child th { border-bottom: 1px solid #000; }\n')
-cat('.table2-replication tbody tr:last-child td { border-bottom: 2px solid #000; }\n')
-cat('.table2-replication th { text-align: center; font-weight: normal; }\n')
-cat('.table2-replication td:first-child { text-align: left; }\n')
-cat('.table2-replication td:not(:first-child) { text-align: right; }\n')
-cat('.table2-panel-row td { padding-top: 10px; font-style: italic; text-align: left !important; }\n')
-cat('.table2-note { font-size: 0.85em; margin-top: 6px; }\n')
-cat('</style>\n')
-
-cat('<table class="table2-replication">')
-cat('<caption><strong>Table 2: Summary Statistics of the Baseline Sample</strong></caption>')
-cat('<thead>')
-cat('<tr><th></th><th colspan="4">treated cities (N = ', table2_n_treated, ')</th><th colspan="4">control cities (N = ', table2_n_control, ')</th></tr>', sep = '')
-cat('<tr><th>Panel A: City level characteristics</th><th>mean</th><th>p25</th><th>median</th><th>p75</th><th>mean</th><th>p25</th><th>median</th><th>p75</th></tr>')
-cat('</thead><tbody>')
-
-for (i in seq_len(nrow(table2_panel_a))) {
-  row <- table2_panel_a[i, ]
-  cat('<tr>')
-  cat('<td>', html_escape(row$variable), '</td>', sep = '')
-  cat('<td>', row$treated_mean, '</td><td>', row$treated_p25, '</td><td>', row$treated_median, '</td><td>', row$treated_p75, '</td>', sep = '')
-  cat('<td>', row$control_mean, '</td><td>', row$control_p25, '</td><td>', row$control_median, '</td><td>', row$control_p75, '</td>', sep = '')
-  cat('</tr>')
-}
-
-cat('<tr class="table2-panel-row"><td colspan="9">Panel B: Road speed and congestion</td></tr>')
-cat('<tr><th></th><th colspan="4">road segments in treated cities</th><th colspan="4">road segments in control cities</th></tr>')
-cat('<tr><th></th><th># of obs.</th><th># of unique segments</th><th>avg. speed (km/h)</th><th>avg. congest. index</th><th># of obs.</th><th># of unique segments</th><th>avg. speed (km/h)</th><th>avg. congest. index</th></tr>')
-
-for (i in seq_len(nrow(table2_panel_b))) {
-  row <- table2_panel_b[i, ]
-  cat('<tr>')
-  cat('<td>', html_escape(row$road_type), '</td>', sep = '')
-  cat('<td>', row$treated_n_obs, '</td><td>', row$treated_n_segments, '</td><td>', row$treated_avg_speed, '</td><td>', row$treated_avg_congestion_index, '</td>', sep = '')
-  cat('<td>', row$control_n_obs, '</td><td>', row$control_n_segments, '</td><td>', row$control_avg_speed, '</td><td>', row$control_avg_congestion_index, '</td>', sep = '')
-  cat('</tr>')
-}
-
-cat('</tbody></table>')
-cat('<p class="table2-note"><em>Note:</em> Data in Panel A are from the 2017 Statistical Yearbook of Chinese Cities. In Panel B, each observation is a road segment-by-week-to-opening. Segments in the baseline regression sample are included. Treated road segments are those directly affected by the new subway lines. Week-to-opening is between 6 weeks before and 48 weeks after line opening.</p>')
+```{r table2_panel_a_table}
+table2_panel_a %>%
+  rename(
+    "Characteristic" = variable,
+    "Treated: mean" = treated_mean,
+    "Treated: p25" = treated_p25,
+    "Treated: median" = treated_median,
+    "Treated: p75" = treated_p75,
+    "Control: mean" = control_mean,
+    "Control: p25" = control_p25,
+    "Control: median" = control_median,
+    "Control: p75" = control_p75
+  ) %>%
+  kable(
+    caption = paste0(
+      "Table 2, Panel A: City level characteristics ",
+      "(treated cities N = ", table2_n_treated,
+      "; control cities N = ", table2_n_control, ")"
+    ),
+    align = c("l", rep("r", 8))
+  )
 ```
+
+```{r table2_panel_b_table}
+table2_panel_b %>%
+  rename(
+    "Road type" = road_type,
+    "Treated: # obs." = treated_n_obs,
+    "Treated: # segments" = treated_n_segments,
+    "Treated: avg. speed (km/h)" = treated_avg_speed,
+    "Treated: avg. congest. index" = treated_avg_congestion_index,
+    "Control: # obs." = control_n_obs,
+    "Control: # segments" = control_n_segments,
+    "Control: avg. speed (km/h)" = control_avg_speed,
+    "Control: avg. congest. index" = control_avg_congestion_index
+  ) %>%
+  kable(
+    caption = "Table 2, Panel B: Road speed and congestion",
+    align = c("l", rep("r", 8))
+  )
+```
+
+*Note:* Data in Panel A are from the 2017 Statistical Yearbook of Chinese Cities. In Panel B, each observation is a road segment-by-week-to-opening. Segments in the baseline regression sample are included. Treated road segments are those directly affected by the new subway lines. Week-to-opening is between 6 weeks before and 48 weeks after line opening.
