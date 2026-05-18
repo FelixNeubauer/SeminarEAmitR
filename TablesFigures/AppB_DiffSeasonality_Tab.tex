@@ -1,0 +1,22 @@
+{
+\def\sym#1{\ifmmode^{#1}\else\(^{#1}\)\fi}
+\begin{tabular}{l*{6}{c}}
+\hline\hline
+            &\multicolumn{1}{c}{(1)}&\multicolumn{1}{c}{(2)}&\multicolumn{1}{c}{(3)}&\multicolumn{1}{c}{(4)}&\multicolumn{1}{c}{(5)}&\multicolumn{1}{c}{(6)}\\
+            &\multicolumn{1}{c}{none}&\multicolumn{1}{c}{pop}&\multicolumn{1}{c}{gdppc}&\multicolumn{1}{c}{both}&\multicolumn{1}{c}{qua}&\multicolumn{1}{c}{cub}\\
+\hline
+TP          &       0.047\sym{***}&       0.044\sym{***}&       0.046\sym{***}&       0.044\sym{***}&       0.039\sym{***}&       0.044\sym{***}\\
+            &     (0.008)         &     (0.008)         &     (0.008)         &     (0.008)         &     (0.009)         &     (0.009)         \\
+[1em]
+treat       &       0.000         &       0.000         &       0.000         &       0.000         &       0.000         &       0.000         \\
+            &         (.)         &         (.)         &         (.)         &         (.)         &         (.)         &         (.)         \\
+[1em]
+\_cons      &      -0.012\sym{***}&      -0.011\sym{***}&      -0.012\sym{***}&      -0.011\sym{***}&      -0.009\sym{***}&      -0.011\sym{***}\\
+            &     (0.003)         &     (0.003)         &     (0.003)         &     (0.003)         &     (0.003)         &     (0.003)         \\
+\hline
+N           &      642453         &      642453         &      642453         &      642453         &      642453         &      642453         \\
+\hline\hline
+\multicolumn{7}{l}{\footnotesize Standard errors in parentheses}\\
+\multicolumn{7}{l}{\footnotesize \sym{*} \(p<0.1\), \sym{**} \(p<0.05\), \sym{***} \(p<0.01\)}\\
+\end{tabular}
+}

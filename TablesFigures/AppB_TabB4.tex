@@ -1,0 +1,24 @@
+\begin{table}[htbp]\centering
+\def\sym#1{\ifmmode^{#1}\else\(^{#1}\)\fi}
+\caption{Subway and Other Modes of Transportation}
+\begin{tabular}{l*{3}{c}}
+\hline\hline
+            &\multicolumn{1}{c}{(1)}&\multicolumn{1}{c}{(2)}&\multicolumn{1}{c}{(3)}\\
+            &\multicolumn{1}{c}{BusRiderPC}&\multicolumn{1}{c}{BusMileagePC}&\multicolumn{1}{c}{CarsPC}\\
+\hline
+SubwayRidePC&      -0.218\sym{**} &      -5.312         &      -2.203         \\
+            &     (0.103)         &    (10.488)         &     (3.471)         \\
+[1em]
+\_cons      &     268.241\sym{***}&    9821.149\sym{***}&    2164.227\sym{***}\\
+            &     (2.152)         &   (390.980)         &    (64.849)         \\
+\hline
+CityFE      &           1         &           1         &           1         \\
+YearFE      &                     &                     &                     \\
+N           &         529         &         249         &         426         \\
+NCity       &                     &                     &                     \\
+MeanDep     &                     &                     &                     \\
+\hline\hline
+\multicolumn{4}{l}{\footnotesize Standard errors in parentheses}\\
+\multicolumn{4}{l}{\footnotesize \sym{*} \(p<0.1\), \sym{**} \(p<0.05\), \sym{***} \(p<0.01\)}\\
+\end{tabular}
+\end{table}

@@ -1,0 +1,17 @@
+\begin{table}[htbp]\centering
+\def\sym#1{\ifmmode^{#1}\else\(^{#1}\)\fi}
+\caption{Table 3}
+\begin{tabular}{l*{3}{c}}
+\hline\hline
+            &\multicolumn{1}{c}{(1)}&\multicolumn{1}{c}{(2)}&\multicolumn{1}{c}{(3)}\\
+            &\multicolumn{1}{c}{stack}&\multicolumn{1}{c}{stack-season}&\multicolumn{1}{c}{twoway-treatonly}\\
+\hline
+treat\_post  &       0.044\sym{***}&       0.033\sym{***}&       0.033\sym{***}\\
+            &     (0.008)         &     (0.009)         &     (0.010)         \\
+\hline
+\(N\)       &    11931441         &     5292057         &     5292057         \\
+\hline\hline
+\multicolumn{4}{l}{\footnotesize Standard errors in parentheses}\\
+\multicolumn{4}{l}{\footnotesize \sym{*} \(p<0.1\), \sym{**} \(p<0.05\), \sym{***} \(p<0.01\)}\\
+\end{tabular}
+\end{table}
