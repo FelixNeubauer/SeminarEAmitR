@@ -578,35 +578,28 @@ summarise_city_var <- function(data, variable, digits) {
   )
 }
 
-city_stats <- bind_rows(
+make_city_stats_row <- function(variable_label, group_label, treat_value, source_variable, digits) {
+  group_data <- table2_city %>%
+    filter(treat == treat_value)
+  stats <- summarise_city_var(group_data, source_variable, digits)
+
   tibble(
-    variable = "population (million)",
-    group = "treated cities",
-    n_cities = sum(table2_city$treat == 1, na.rm = TRUE),
-    digits = 2,
-    as.list(summarise_city_var(filter(table2_city, treat == 1), "pop_million", 2))
-  ),
-  tibble(
-    variable = "GDP per capita (yuan)",
-    group = "treated cities",
-    n_cities = sum(table2_city$treat == 1, na.rm = TRUE),
-    digits = 0,
-    as.list(summarise_city_var(filter(table2_city, treat == 1), "gdppc", 0))
-  ),
-  tibble(
-    variable = "population (million)",
-    group = "control cities",
-    n_cities = sum(table2_city$treat == 0, na.rm = TRUE),
-    digits = 2,
-    as.list(summarise_city_var(filter(table2_city, treat == 0), "pop_million", 2))
-  ),
-  tibble(
-    variable = "GDP per capita (yuan)",
-    group = "control cities",
-    n_cities = sum(table2_city$treat == 0, na.rm = TRUE),
-    digits = 0,
-    as.list(summarise_city_var(filter(table2_city, treat == 0), "gdppc", 0))
+    variable = variable_label,
+    group = group_label,
+    n_cities = nrow(group_data),
+    digits = digits,
+    mean = stats[["mean"]],
+    p25 = stats[["p25"]],
+    median = stats[["median"]],
+    p75 = stats[["p75"]]
   )
+}
+
+city_stats <- bind_rows(
+  make_city_stats_row("population (million)", "treated cities", 1, "pop_million", 2),
+  make_city_stats_row("GDP per capita (yuan)", "treated cities", 1, "gdppc", 0),
+  make_city_stats_row("population (million)", "control cities", 0, "pop_million", 2),
+  make_city_stats_row("GDP per capita (yuan)", "control cities", 0, "gdppc", 0)
 )
 
 table2_panel_a <- city_stats %>%
