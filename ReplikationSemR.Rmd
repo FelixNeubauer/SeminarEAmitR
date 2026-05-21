@@ -1002,3 +1002,122 @@ kable(
 ```
 
 ##### Figure 2
+```{r fig2_libraries, include=FALSE}
+library(fixest)
+library(broom)
+library(purrr)
+library(patchwork)
+library(readr)
+```
+
+```{r fig2_data, echo=FALSE}
+base_samp <- read_dta("Data/BaseSamp.dta") %>%
+  filter(between(wk2open, -6, 47))
+
+# Stata Fig2.do baut exakt diese Event-Variablen:
+# Am6-Am2, A0, Ap1-Ap47 (Am1 ist ausgelassene Referenzperiode)
+for (w in -6:-2) {
+  nm <- paste0("Am", abs(w))
+  base_samp[[nm]] <- base_samp$treat * as.numeric(base_samp$wk2open == w)
+}
+base_samp$A0 <- base_samp$treat * as.numeric(base_samp$wk2open == 0)
+for (w in 1:47) {
+  nm <- paste0("Ap", w)
+  base_samp[[nm]] <- base_samp$treat * as.numeric(base_samp$wk2open == w)
+}
+
+rhs_terms <- c(paste0("Am", 6:2), "A0", paste0("Ap", 1:47))
+rhs_str <- paste(rhs_terms, collapse = " + ")
+
+# Panel A: stacked DID (wie Fig2.do)
+form_a <- as.formula(
+  paste0("lnspd_res ~ ", rhs_str, " + treat | linkid + case_wk2open + yrwk[lnpop] + yrwk[lngdppc]")
+)
+mod_fig2_a <- feols(form_a, cluster = ~case, data = base_samp)
+
+# Panel B: TWFE, treated units only
+form_b <- as.formula(
+  paste0("lnspd_res ~ ", rhs_str, " | linkid + yrwk")
+)
+mod_fig2_b <- feols(form_b, cluster = ~case, data = base_samp %>% filter(treat == 1))
+
+# Panel C: TWFE + differential seasonality, treated units only
+form_c <- as.formula(
+  paste0("lnspd_res ~ ", rhs_str, " | linkid + yrwk + yrwk[lnpop] + yrwk[lngdppc]")
+)
+mod_fig2_c <- feols(form_c, cluster = ~case, data = base_samp %>% filter(treat == 1))
+
+extract_event_path <- function(model) {
+  td <- broom::tidy(model)
+
+  pre <- map_dfr(-6:-2, function(w) {
+    key <- paste0("Am", abs(w))
+    hit <- td %>% filter(term == key)
+    tibble(
+      week = w,
+      estimate = hit$estimate[1],
+      std_error = hit$std.error[1]
+    )
+  })
+
+  ref <- tibble(week = -1, estimate = 0, std_error = 0)
+
+  zero <- td %>% filter(term == "A0") %>%
+    transmute(week = 0, estimate = estimate, std_error = std.error)
+
+  post <- map_dfr(1:47, function(w) {
+    key <- paste0("Ap", w)
+    hit <- td %>% filter(term == key)
+    tibble(
+      week = w,
+      estimate = hit$estimate[1],
+      std_error = hit$std.error[1]
+    )
+  })
+
+  bind_rows(pre, ref, zero, post) %>%
+    mutate(
+      ci_low = estimate - 1.96 * std_error,
+      ci_high = estimate + 1.96 * std_error
+    )
+}
+
+fig2_a_df <- extract_event_path(mod_fig2_a)
+fig2_b_df <- extract_event_path(mod_fig2_b)
+fig2_c_df <- extract_event_path(mod_fig2_c)
+
+plot_fig2_panel <- function(df, panel_title) {
+  ggplot(df, aes(x = week, y = estimate)) +
+    geom_errorbar(aes(ymin = ci_low, ymax = ci_high), width = 0, color = "#6d8d84", linewidth = 0.5) +
+    geom_point(color = "#6d8d84", size = 1.7) +
+    geom_vline(xintercept = 0, color = "#a63d40", linewidth = 0.6) +
+    scale_x_continuous(breaks = seq(-8, 48, 4), limits = c(-8, 48)) +
+    scale_y_continuous(breaks = seq(-0.05, 0.1, 0.05), limits = c(-0.055, 0.105)) +
+    labs(title = panel_title, x = "Weeks to subway opening", y = "Coefficient") +
+    theme_minimal(base_size = 11) +
+    theme(
+      plot.title = element_text(hjust = 0, face = "plain"),
+      panel.grid.minor = element_blank()
+    )
+}
+
+p_fig2_a <- plot_fig2_panel(fig2_a_df, "Panel A. Stacked DID")
+p_fig2_b <- plot_fig2_panel(fig2_b_df, "Panel B. Two-way fixed effects, not accounting for seasonality")
+p_fig2_c <- plot_fig2_panel(fig2_c_df, "Panel C. Two-way fixed effects, accounting for seasonality")
+```
+
+```{r fig2_panel_a, echo=FALSE, fig.width=7, fig.height=4.5}
+p_fig2_a
+```
+
+```{r fig2_panel_b, echo=FALSE, fig.width=7, fig.height=4.5}
+p_fig2_b
+```
+
+```{r fig2_panel_c, echo=FALSE, fig.width=7, fig.height=4.5}
+p_fig2_c
+```
+
+```{r fig2_combined, echo=FALSE, fig.width=10, fig.height=8}
+(p_fig2_a | p_fig2_b) / p_fig2_c
+```
