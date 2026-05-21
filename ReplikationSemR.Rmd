@@ -1007,6 +1007,7 @@ library(fixest)
 library(broom)
 library(purrr)
 library(patchwork)
+library(readr)
 ```
 
 ```{r fig2_data, echo=FALSE}
@@ -1016,22 +1017,22 @@ base_samp <- read_dta("Data/BaseSamp.dta") %>%
 
 study_weeks <- -6:47
 
-extract_event_path <- function(model, prefix, weeks = study_weeks) {
-  tidy <- broom::tidy(model)
-  map_dfr(weeks, function(w) {
-    if (w == -1) {
-      tibble(week = w, estimate = 0, std_error = 0)
-    } else {
-      term_name <- paste0(prefix, w)
-      hit <- tidy %>% filter(term == term_name)
-      tibble(
-        week = w,
-        estimate = ifelse(nrow(hit) == 0, NA_real_, hit$estimate[1]),
-        std_error = ifelse(nrow(hit) == 0, NA_real_, hit$std.error[1])
-      )
-    }
-  }) %>%
+extract_event_path <- function(model, weeks = study_weeks) {
+  tidy <- broom::tidy(model) %>%
+    mutate(week = readr::parse_number(term)) %>%
+    filter(!is.na(week)) %>%
+    group_by(week) %>%
+    summarise(
+      estimate = first(estimate),
+      std_error = first(std.error),
+      .groups = "drop"
+    )
+
+  tibble(week = weeks) %>%
+    left_join(tidy, by = "week") %>%
     mutate(
+      estimate = if_else(week == -1, 0, estimate),
+      std_error = if_else(week == -1, 0, std_error),
       ci_low = estimate - 1.96 * std_error,
       ci_high = estimate + 1.96 * std_error
     )
@@ -1039,7 +1040,7 @@ extract_event_path <- function(model, prefix, weeks = study_weeks) {
 
 mod_fig2_a <- feols(
   lnspd_res ~ i(wk2open, treat, ref = -1) + treat |
-    linkid + case_wk2open + yrwk^lnpop + yrwk^lngdppc,
+    linkid + case_wk2open + yrwk + yrwk[lnpop] + yrwk[lngdppc],
   cluster = ~case,
   data = base_samp
 )
@@ -1052,14 +1053,14 @@ mod_fig2_b <- feols(
 
 mod_fig2_c <- feols(
   lnspd_res ~ i(wk2open_f, ref = "-1") |
-    linkid + yrwk + yrwk^lnpop + yrwk^lngdppc,
+    linkid + yrwk + yrwk[lnpop] + yrwk[lngdppc],
   cluster = ~case,
   data = base_samp %>% filter(treat == 1)
 )
 
-fig2_a_df <- extract_event_path(mod_fig2_a, "wk2open::")
-fig2_b_df <- extract_event_path(mod_fig2_b, "wk2open_f::")
-fig2_c_df <- extract_event_path(mod_fig2_c, "wk2open_f::")
+fig2_a_df <- extract_event_path(mod_fig2_a)
+fig2_b_df <- extract_event_path(mod_fig2_b)
+fig2_c_df <- extract_event_path(mod_fig2_c)
 
 plot_fig2_panel <- function(df, panel_title) {
   ggplot(df, aes(x = week, y = estimate)) +
