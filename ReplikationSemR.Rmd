@@ -1002,3 +1002,97 @@ kable(
 ```
 
 ##### Figure 2
+```{r fig2_libraries, include=FALSE}
+library(fixest)
+library(broom)
+library(purrr)
+library(patchwork)
+```
+
+```{r fig2_data, echo=FALSE}
+base_samp <- read_dta("Data/BaseSamp.dta") %>%
+  filter(between(wk2open, -6, 47)) %>%
+  mutate(wk2open_f = relevel(factor(wk2open), ref = "-1"))
+
+study_weeks <- -6:47
+
+extract_event_path <- function(model, prefix, weeks = study_weeks) {
+  tidy <- broom::tidy(model)
+  map_dfr(weeks, function(w) {
+    if (w == -1) {
+      tibble(week = w, estimate = 0, std_error = 0)
+    } else {
+      term_name <- paste0(prefix, w)
+      hit <- tidy %>% filter(term == term_name)
+      tibble(
+        week = w,
+        estimate = ifelse(nrow(hit) == 0, NA_real_, hit$estimate[1]),
+        std_error = ifelse(nrow(hit) == 0, NA_real_, hit$std.error[1])
+      )
+    }
+  }) %>%
+    mutate(
+      ci_low = estimate - 1.96 * std_error,
+      ci_high = estimate + 1.96 * std_error
+    )
+}
+
+mod_fig2_a <- feols(
+  lnspd_res ~ i(wk2open, treat, ref = -1) + treat |
+    linkid + case_wk2open + yrwk^lnpop + yrwk^lngdppc,
+  cluster = ~case,
+  data = base_samp
+)
+
+mod_fig2_b <- feols(
+  lnspd_res ~ i(wk2open_f, ref = "-1") | linkid + yrwk,
+  cluster = ~case,
+  data = base_samp %>% filter(treat == 1)
+)
+
+mod_fig2_c <- feols(
+  lnspd_res ~ i(wk2open_f, ref = "-1") |
+    linkid + yrwk + yrwk^lnpop + yrwk^lngdppc,
+  cluster = ~case,
+  data = base_samp %>% filter(treat == 1)
+)
+
+fig2_a_df <- extract_event_path(mod_fig2_a, "wk2open::")
+fig2_b_df <- extract_event_path(mod_fig2_b, "wk2open_f::")
+fig2_c_df <- extract_event_path(mod_fig2_c, "wk2open_f::")
+
+plot_fig2_panel <- function(df, panel_title) {
+  ggplot(df, aes(x = week, y = estimate)) +
+    geom_errorbar(aes(ymin = ci_low, ymax = ci_high), width = 0, color = "#6d8d84", linewidth = 0.5) +
+    geom_point(color = "#6d8d84", size = 1.7) +
+    geom_vline(xintercept = 0, color = "#a63d40", linewidth = 0.6) +
+    scale_x_continuous(breaks = seq(-8, 48, 4), limits = c(-8, 48)) +
+    scale_y_continuous(breaks = seq(-0.05, 0.1, 0.05), limits = c(-0.055, 0.105)) +
+    labs(title = panel_title, x = "Weeks to subway opening", y = "Coefficient") +
+    theme_minimal(base_size = 11) +
+    theme(
+      plot.title = element_text(hjust = 0, face = "plain"),
+      panel.grid.minor = element_blank()
+    )
+}
+
+p_fig2_a <- plot_fig2_panel(fig2_a_df, "Panel A. Stacked DID")
+p_fig2_b <- plot_fig2_panel(fig2_b_df, "Panel B. Two-way fixed effects, not accounting for seasonality")
+p_fig2_c <- plot_fig2_panel(fig2_c_df, "Panel C. Two-way fixed effects, accounting for seasonality")
+```
+
+```{r fig2_panel_a, echo=FALSE, fig.width=7, fig.height=4.5}
+p_fig2_a
+```
+
+```{r fig2_panel_b, echo=FALSE, fig.width=7, fig.height=4.5}
+p_fig2_b
+```
+
+```{r fig2_panel_c, echo=FALSE, fig.width=7, fig.height=4.5}
+p_fig2_c
+```
+
+```{r fig2_combined, echo=FALSE, fig.width=10, fig.height=8}
+(p_fig2_a | p_fig2_b) / p_fig2_c
+```
