@@ -1012,51 +1012,75 @@ library(readr)
 
 ```{r fig2_data, echo=FALSE}
 base_samp <- read_dta("Data/BaseSamp.dta") %>%
-  filter(between(wk2open, -6, 47)) %>%
-  mutate(wk2open_f = relevel(factor(wk2open), ref = "-1"))
+  filter(between(wk2open, -6, 47))
 
-study_weeks <- -6:47
+# Stata Fig2.do baut exakt diese Event-Variablen:
+# Am6-Am2, A0, Ap1-Ap47 (Am1 ist ausgelassene Referenzperiode)
+for (w in -6:-2) {
+  nm <- paste0("Am", abs(w))
+  base_samp[[nm]] <- base_samp$treat * as.numeric(base_samp$wk2open == w)
+}
+base_samp$A0 <- base_samp$treat * as.numeric(base_samp$wk2open == 0)
+for (w in 1:47) {
+  nm <- paste0("Ap", w)
+  base_samp[[nm]] <- base_samp$treat * as.numeric(base_samp$wk2open == w)
+}
 
-extract_event_path <- function(model, weeks = study_weeks) {
-  tidy <- broom::tidy(model) %>%
-    mutate(week = readr::parse_number(term)) %>%
-    filter(!is.na(week)) %>%
-    group_by(week) %>%
-    summarise(
-      estimate = first(estimate),
-      std_error = first(std.error),
-      .groups = "drop"
+rhs_terms <- c(paste0("Am", 6:2), "A0", paste0("Ap", 1:47))
+rhs_str <- paste(rhs_terms, collapse = " + ")
+
+# Panel A: stacked DID (wie Fig2.do)
+form_a <- as.formula(
+  paste0("lnspd_res ~ ", rhs_str, " + treat | linkid + case_wk2open + yrwk[lnpop] + yrwk[lngdppc]")
+)
+mod_fig2_a <- feols(form_a, cluster = ~case, data = base_samp)
+
+# Panel B: TWFE, treated units only
+form_b <- as.formula(
+  paste0("lnspd_res ~ ", rhs_str, " | linkid + yrwk")
+)
+mod_fig2_b <- feols(form_b, cluster = ~case, data = base_samp %>% filter(treat == 1))
+
+# Panel C: TWFE + differential seasonality, treated units only
+form_c <- as.formula(
+  paste0("lnspd_res ~ ", rhs_str, " | linkid + yrwk + yrwk[lnpop] + yrwk[lngdppc]")
+)
+mod_fig2_c <- feols(form_c, cluster = ~case, data = base_samp %>% filter(treat == 1))
+
+extract_event_path <- function(model) {
+  td <- broom::tidy(model)
+
+  pre <- map_dfr(-6:-2, function(w) {
+    key <- paste0("Am", abs(w))
+    hit <- td %>% filter(term == key)
+    tibble(
+      week = w,
+      estimate = hit$estimate[1],
+      std_error = hit$std.error[1]
     )
+  })
 
-  tibble(week = weeks) %>%
-    left_join(tidy, by = "week") %>%
+  ref <- tibble(week = -1, estimate = 0, std_error = 0)
+
+  zero <- td %>% filter(term == "A0") %>%
+    transmute(week = 0, estimate = estimate, std_error = std.error)
+
+  post <- map_dfr(1:47, function(w) {
+    key <- paste0("Ap", w)
+    hit <- td %>% filter(term == key)
+    tibble(
+      week = w,
+      estimate = hit$estimate[1],
+      std_error = hit$std.error[1]
+    )
+  })
+
+  bind_rows(pre, ref, zero, post) %>%
     mutate(
-      estimate = if_else(week == -1, 0, estimate),
-      std_error = if_else(week == -1, 0, std_error),
       ci_low = estimate - 1.96 * std_error,
       ci_high = estimate + 1.96 * std_error
     )
 }
-
-mod_fig2_a <- feols(
-  lnspd_res ~ i(wk2open, treat, ref = -1) + treat |
-    linkid + case_wk2open + yrwk + yrwk[lnpop] + yrwk[lngdppc],
-  cluster = ~case,
-  data = base_samp
-)
-
-mod_fig2_b <- feols(
-  lnspd_res ~ i(wk2open_f, ref = "-1") | linkid + yrwk,
-  cluster = ~case,
-  data = base_samp %>% filter(treat == 1)
-)
-
-mod_fig2_c <- feols(
-  lnspd_res ~ i(wk2open_f, ref = "-1") |
-    linkid + yrwk + yrwk[lnpop] + yrwk[lngdppc],
-  cluster = ~case,
-  data = base_samp %>% filter(treat == 1)
-)
 
 fig2_a_df <- extract_event_path(mod_fig2_a)
 fig2_b_df <- extract_event_path(mod_fig2_b)
