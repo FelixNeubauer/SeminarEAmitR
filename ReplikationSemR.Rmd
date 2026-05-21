@@ -21,12 +21,12 @@ library(kableExtra)
 ```
 
 
-## R Markdown
 
 
 
 
 
+##### Figure 1
 
 ```{r DataUrbantransitVorbereiten, echo=FALSE, include = FALSE}
 # Datensatz einlesten
@@ -334,7 +334,7 @@ ggsave(
 
 ```
 
-
+##### Table 1 Grafik
 
 ```{r grafik1_daten}
 
@@ -524,7 +524,7 @@ plot_data_grafik1_monat
 ```
 
 
-## Table 2: Summary Statistics of the Baseline Sample
+##### Table 2
 
 ```{r table2_helpers, include=FALSE}
 # Kleine Hilfsfunktionen für die Replikation von Table 2.
@@ -1001,4 +1001,4 @@ kable(
 }
 ```
 
-
+##### Figure 2
