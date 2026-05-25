@@ -1134,6 +1134,35 @@ p_fig2_c
 ##### Table 3
 
 ```{r table3_baseline_estimates, results='asis', echo=FALSE}
+tab3_data <- read_dta("Data/BaseSamp.dta") %>%
+  mutate(
+    post = as.numeric(wk2open >= 0),
+    TP = treat * post
+  )
+
+# Replikation von ReplicaCodes/Tab3.do
+tab3_mod1 <- feols(
+  lnspd_res ~ TP + treat | linkid + case_wk2open + yrwk[lnpop] + yrwk[lngdppc],
+  data = tab3_data %>% filter(between(wk2open, -6, 47)),
+  cluster = ~case
+)
+
+tab3_mod2 <- feols(
+  lnspd_res ~ TP | linkid + yrwk,
+  data = tab3_data %>% filter(treat == 1, between(wk2open, -6, 47)),
+  cluster = ~case
+)
+
+tab3_mod3 <- feols(
+  lnspd_res ~ TP | linkid + yrwk + yrwk[lnpop] + yrwk[lngdppc],
+  data = tab3_data %>% filter(treat == 1, between(wk2open, -6, 47)),
+  cluster = ~case
+)
+
+fmt_coef <- function(m) sprintf("%.3f", coef(m)[["TP"]])
+fmt_se <- function(m) sprintf("(%.3f)", sqrt(vcov(m)[["TP", "TP"]]))
+fmt_n <- function(m) formatC(nobs(m), format = "d", big.mark = ",")
+
 table3 <- tibble::tibble(
   term = c(
     "Treated × post",
@@ -1147,9 +1176,9 @@ table3 <- tibble::tibble(
     "",
     "Observations"
   ),
-  `1` = c("0.044", "(0.008)", "Stack DID", "✓", "✓", "", "✓", "✓", "", "642,453"),
-  `2` = c("0.036", "(0.009)", "Two-way fixed effects", "", "✓", "✓", "", "", "", "284,301"),
-  `3` = c("0.036", "(0.010)", "Two-way fixed effects", "", "✓", "✓", "✓", "", "", "284,301")
+  `1` = c(fmt_coef(tab3_mod1), fmt_se(tab3_mod1), "Stack DID", "✓", "✓", "", "✓", "✓", "", fmt_n(tab3_mod1)),
+  `2` = c(fmt_coef(tab3_mod2), fmt_se(tab3_mod2), "Two-way fixed effects", "", "✓", "✓", "", "", "", fmt_n(tab3_mod2)),
+  `3` = c(fmt_coef(tab3_mod3), fmt_se(tab3_mod3), "Two-way fixed effects", "", "✓", "✓", "✓", "", "", fmt_n(tab3_mod3))
 )
 
 kableExtra::kbl(
@@ -1170,10 +1199,9 @@ kableExtra::kbl(
   kableExtra::footnote(
     general = paste0(
       "The dependent variable is weekly average residual speed. ",
-      "Standard errors are in parentheses, clustered at the group level in column 1, ",
-      "clustered at the subway line level in columns 2 and 3. ",
-      "Values are taken from the replication output of Tab3 ",
-      "(see ReplicaCodes/Tab3.do and TablesFigures/Tab3.tex)."
+      "Standard errors are in parentheses. ",
+      "This table is computed by replicating the estimation logic in ReplicaCodes/Tab3.do ",
+      "directly in R (same sample restrictions and FE structure)."
     ),
     general_title = "Notes:",
     footnote_as_chunk = TRUE,
