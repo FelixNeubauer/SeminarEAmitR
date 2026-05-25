@@ -1187,15 +1187,15 @@ kableExtra::kbl(
   align = c("l", "c", "c", "c"),
   col.names = c("", "<span>(1)</span>", "<span>(2)</span>", "<span>(3)</span>"),
   escape = FALSE,
-  caption = "Table 3—Baseline Estimates"
+  caption = "Table 3—Baseline Estimates",
+  table.attr = 'class="table3-original"'
 ) %>%
   kableExtra::kable_styling(
     full_width = FALSE,
     position = "center",
     bootstrap_options = NULL,
     font_size = 18,
-    html_font = "Times New Roman",
-    table.attr = 'class="table3-original"'
+    html_font = "Times New Roman"
   ) %>%
   kableExtra::footnote(
     general = paste0(
