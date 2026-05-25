@@ -1185,7 +1185,7 @@ kableExtra::kbl(
   table3,
   format = "html",
   align = c("l", "c", "c", "c"),
-  col.names = c("", "(1)", "(2)", "(3)"),
+  col.names = c("", "<span>(1)</span>", "<span>(2)</span>", "<span>(3)</span>"),
   escape = FALSE,
   caption = "Table 3—Baseline Estimates"
 ) %>%
@@ -1194,7 +1194,8 @@ kableExtra::kbl(
     position = "center",
     bootstrap_options = NULL,
     font_size = 18,
-    html_font = "Times New Roman"
+    html_font = "Times New Roman",
+    table.attr = 'class="table3-original"'
   ) %>%
   kableExtra::footnote(
     general = paste0(
@@ -1207,4 +1208,11 @@ kableExtra::kbl(
     footnote_as_chunk = TRUE,
     escape = FALSE
   )
+```
+
+```{css, echo=FALSE}
+.table3-original thead th {
+  text-align: center !important;
+  font-weight: normal !important;
+}
 ```
