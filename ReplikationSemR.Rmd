@@ -1129,3 +1129,54 @@ p_fig2_c
     widths = c(1, 1),
     heights = c(1, 1)
   )
+```
+
+##### Table 3
+
+```{r table3_baseline_estimates, results='asis', echo=FALSE}
+table3 <- tibble::tibble(
+  term = c(
+    "Treated × post",
+    "",
+    "Model",
+    "Group-by-week-to-open fixed effects",
+    "Road segment fixed effects",
+    "Calendar week fixed effects",
+    "Adjusted for differential seasonality",
+    "Including segments from control cities",
+    "",
+    "Observations"
+  ),
+  `1` = c("0.044", "(0.008)", "Stack DID", "✓", "✓", "", "✓", "✓", "", "642,453"),
+  `2` = c("0.036", "(0.009)", "Two-way fixed effects", "", "✓", "✓", "", "", "", "284,301"),
+  `3` = c("0.036", "(0.010)", "Two-way fixed effects", "", "✓", "✓", "✓", "", "", "284,301")
+)
+
+kableExtra::kbl(
+  table3,
+  format = "html",
+  align = c("l", "c", "c", "c"),
+  col.names = c("", "(1)", "(2)", "(3)"),
+  escape = FALSE,
+  caption = "Table 3—Baseline Estimates"
+) %>%
+  kableExtra::kable_styling(
+    full_width = FALSE,
+    position = "center",
+    bootstrap_options = NULL,
+    font_size = 18,
+    html_font = "Times New Roman"
+  ) %>%
+  kableExtra::footnote(
+    general = paste0(
+      "The dependent variable is weekly average residual speed. ",
+      "Standard errors are in parentheses, clustered at the group level in column 1, ",
+      "clustered at the subway line level in columns 2 and 3. ",
+      "Values are taken from the replication output of Tab3 ",
+      "(see ReplicaCodes/Tab3.do and TablesFigures/Tab3.tex)."
+    ),
+    general_title = "Notes:",
+    footnote_as_chunk = TRUE,
+    escape = FALSE
+  )
+```
