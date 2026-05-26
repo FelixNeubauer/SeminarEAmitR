@@ -1217,6 +1217,118 @@ kableExtra::kbl(
 }
 ```
 
+##### Table 4
+
+```{r table4_varying_preperiod, results='asis', echo=FALSE}
+tab4_data <- read_dta("Data/BaseSamp.dta") %>%
+  mutate(
+    post = as.numeric(wk2open >= 0),
+    TP = treat * post,
+    wkabs = abs(wk2open),
+    wk2open_pre_treat = wkabs * (post == 0) * treat,
+    wk2open_post_treat = wkabs * (post == 1) * treat,
+    wk2open2_pre_treat = wkabs^2 * (post == 0) * treat,
+    wk2open2_post_treat = wkabs^2 * (post == 1) * treat,
+    wk2open3_pre_treat = wkabs^3 * (post == 0) * treat,
+    wk2open3_post_treat = wkabs^3 * (post == 1) * treat,
+    wk2open4_pre_treat = wkabs^4 * (post == 0) * treat,
+    wk2open4_post_treat = wkabs^4 * (post == 1) * treat,
+    wk2open5_pre_treat = wkabs^5 * (post == 0) * treat,
+    wk2open5_post_treat = wkabs^5 * (post == 1) * treat
+  )
+
+run_tab4 <- function(data, pre_weeks = 48L, poly_degree = 0L) {
+  data_use <- data %>% filter(between(wk2open, -pre_weeks, 47))
+  rhs <- c("TP", "treat")
+  if (poly_degree >= 1) {
+    for (d in seq_len(poly_degree)) {
+      if (d == 1) {
+        rhs <- c(rhs, "wk2open_pre_treat", "wk2open_post_treat")
+      } else {
+        rhs <- c(
+          rhs,
+          paste0("wk2open", d, "_pre_treat"),
+          paste0("wk2open", d, "_post_treat")
+        )
+      }
+    }
+  }
+  fml <- as.formula(
+    paste0(
+      "lnspd_res ~ ", paste(rhs, collapse = " + "),
+      " | linkid + case_wk2open + yrwk[lnpop] + yrwk[lngdppc]"
+    )
+  )
+  feols(fml, cluster = ~case, data = data_use)
+}
+
+tab4_mod1 <- run_tab4(tab4_data, pre_weeks = 12, poly_degree = 0)
+tab4_mod2 <- run_tab4(tab4_data, pre_weeks = 24, poly_degree = 0)
+tab4_mod3 <- run_tab4(tab4_data, pre_weeks = 48, poly_degree = 0)
+tab4_mod4 <- run_tab4(tab4_data, pre_weeks = 48, poly_degree = 1)
+tab4_mod5 <- run_tab4(tab4_data, pre_weeks = 48, poly_degree = 3)
+tab4_mod6 <- run_tab4(tab4_data, pre_weeks = 48, poly_degree = 5)
+
+tab4_models <- list(tab4_mod1, tab4_mod2, tab4_mod3, tab4_mod4, tab4_mod5, tab4_mod6)
+fmt_coef <- function(m) sprintf("%.3f", coef(m)[["TP"]])
+fmt_se <- function(m) sprintf("(%.3f)", sqrt(vcov(m)[["TP", "TP"]]))
+fmt_n <- function(m) formatC(nobs(m), format = "d", big.mark = ",")
+
+table4 <- tibble::tibble(
+  term = c(
+    "Treated × post",
+    "",
+    "Range of weeks relative to opening",
+    "Polynomial of time trends",
+    "",
+    "Observations"
+  ),
+  `1` = c(fmt_coef(tab4_mod1), fmt_se(tab4_mod1), "[-12, 47]", "None", "", fmt_n(tab4_mod1)),
+  `2` = c(fmt_coef(tab4_mod2), fmt_se(tab4_mod2), "[-24, 47]", "None", "", fmt_n(tab4_mod2)),
+  `3` = c(fmt_coef(tab4_mod3), fmt_se(tab4_mod3), "[-48, 47]", "None", "", fmt_n(tab4_mod3)),
+  `4` = c(fmt_coef(tab4_mod4), fmt_se(tab4_mod4), "[-48, 47]", "Linear", "", fmt_n(tab4_mod4)),
+  `5` = c(fmt_coef(tab4_mod5), fmt_se(tab4_mod5), "[-48, 47]", "Up to third", "", fmt_n(tab4_mod5)),
+  `6` = c(fmt_coef(tab4_mod6), fmt_se(tab4_mod6), "[-48, 47]", "Up to fifth", "", fmt_n(tab4_mod6))
+)
+
+kbl(
+  table4,
+  format = "html",
+  align = c("l", rep("c", 6)),
+  col.names = c("", "(1)", "(2)", "(3)", "(4)", "(5)", "(6)"),
+  escape = FALSE,
+  caption = "Table 4—Varying the Length of the Pre-Period",
+  table.attr = 'class="table4-original"'
+) %>%
+  add_header_above(c(" " = 1, "Length of pre-periods\nNumber of weeks before launch" = 3, "Discontinuity around the launch\nTreatment-specific time trend polynomial" = 3)) %>%
+  add_header_above(c(" " = 1, "12" = 1, "24" = 1, "48" = 1, "Linear" = 1, "Up to third" = 1, "Up to fifth" = 1)) %>%
+  kable_styling(
+    full_width = FALSE,
+    position = "center",
+    bootstrap_options = NULL,
+    font_size = 18,
+    html_font = "Times New Roman"
+  ) %>%
+  footnote(
+    general = paste0(
+      "The dependent variable is a segment's weekly average log residual speed. ",
+      "All models are estimated using the stacked DID model and include all 45 treated lines. ",
+      "Polynomial of flexible time trends indicates the degree of the polynomials for treatment-specific ",
+      "\"pre\" and \"post\" time trends. Standard errors are in parentheses, clustered at the group level."
+    ),
+    general_title = "Notes:",
+    footnote_as_chunk = TRUE,
+    escape = FALSE
+  )
+```
+
+```{css, echo=FALSE}
+.table4-original thead th {
+  text-align: center !important;
+  font-weight: normal !important;
+}
+```
+
 ##### Figure 3
 
 ```{r fig3_data, echo=FALSE, include=FALSE}
