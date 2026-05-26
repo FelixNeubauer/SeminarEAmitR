@@ -1216,3 +1216,5 @@ kableExtra::kbl(
   font-weight: normal !important;
 }
 ```
+
+##### Figure 3
