@@ -1129,3 +1129,90 @@ p_fig2_c
     widths = c(1, 1),
     heights = c(1, 1)
   )
+```
+
+##### Table 3
+
+```{r table3_baseline_estimates, results='asis', echo=FALSE}
+tab3_data <- read_dta("Data/BaseSamp.dta") %>%
+  mutate(
+    post = as.numeric(wk2open >= 0),
+    TP = treat * post
+  )
+
+# Replikation von ReplicaCodes/Tab3.do
+tab3_mod1 <- feols(
+  lnspd_res ~ TP + treat | linkid + case_wk2open + yrwk[lnpop] + yrwk[lngdppc],
+  data = tab3_data %>% filter(between(wk2open, -6, 47)),
+  cluster = ~case
+)
+
+tab3_mod2 <- feols(
+  lnspd_res ~ TP | linkid + yrwk,
+  data = tab3_data %>% filter(treat == 1, between(wk2open, -6, 47)),
+  cluster = ~case
+)
+
+tab3_mod3 <- feols(
+  lnspd_res ~ TP | linkid + yrwk + yrwk[lnpop] + yrwk[lngdppc],
+  data = tab3_data %>% filter(treat == 1, between(wk2open, -6, 47)),
+  cluster = ~case
+)
+
+fmt_coef <- function(m) sprintf("%.3f", coef(m)[["TP"]])
+fmt_se <- function(m) sprintf("(%.3f)", sqrt(vcov(m)[["TP", "TP"]]))
+fmt_n <- function(m) formatC(nobs(m), format = "d", big.mark = ",")
+
+table3 <- tibble::tibble(
+  term = c(
+    "Treated × post",
+    "",
+    "Model",
+    "Group-by-week-to-open fixed effects",
+    "Road segment fixed effects",
+    "Calendar week fixed effects",
+    "Adjusted for differential seasonality",
+    "Including segments from control cities",
+    "",
+    "Observations"
+  ),
+  `1` = c(fmt_coef(tab3_mod1), fmt_se(tab3_mod1), "Stack DID", "✓", "✓", "", "✓", "✓", "", fmt_n(tab3_mod1)),
+  `2` = c(fmt_coef(tab3_mod2), fmt_se(tab3_mod2), "Two-way fixed effects", "", "✓", "✓", "", "", "", fmt_n(tab3_mod2)),
+  `3` = c(fmt_coef(tab3_mod3), fmt_se(tab3_mod3), "Two-way fixed effects", "", "✓", "✓", "✓", "", "", fmt_n(tab3_mod3))
+)
+
+kableExtra::kbl(
+  table3,
+  format = "html",
+  align = c("l", "c", "c", "c"),
+  col.names = c("", "<span>(1)</span>", "<span>(2)</span>", "<span>(3)</span>"),
+  escape = FALSE,
+  caption = "Table 3—Baseline Estimates",
+  table.attr = 'class="table3-original"'
+) %>%
+  kableExtra::kable_styling(
+    full_width = FALSE,
+    position = "center",
+    bootstrap_options = NULL,
+    font_size = 18,
+    html_font = "Times New Roman"
+  ) %>%
+  kableExtra::footnote(
+    general = paste0(
+      "The dependent variable is weekly average residual speed. ",
+      "Standard errors are in parentheses. ",
+      "This table is computed by replicating the estimation logic in ReplicaCodes/Tab3.do ",
+      "directly in R (same sample restrictions and FE structure)."
+    ),
+    general_title = "Notes:",
+    footnote_as_chunk = TRUE,
+    escape = FALSE
+  )
+```
+
+```{css, echo=FALSE}
+.table3-original thead th {
+  text-align: center !important;
+  font-weight: normal !important;
+}
+```
