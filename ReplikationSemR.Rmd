@@ -1218,3 +1218,35 @@ kableExtra::kbl(
 ```
 
 ##### Figure 3
+
+```{r fig3_data, echo=FALSE, include=FALSE}
+# Replikation von ReplicaCodes/Fig3.do (Teil III: Graph auf Basis von Fig3_PlaceboWald.dta)
+fig3_df <- read_dta("TablesFigures/Fig3_PlaceboWald.dta") %>%
+  rename(wald_stat = B1) %>%
+  filter(between(wk2open, -47, 47))
+```
+
+```{r fig3_plot, echo=FALSE}
+# Darstellung analog zum Stata-Graphen in Fig3.do
+p_fig3 <- ggplot(fig3_df, aes(x = wk2open, y = wald_stat)) +
+  geom_point(shape = 4, color = "#5f7f77", size = 2.8, stroke = 1.1) +
+  geom_vline(xintercept = 0, color = "red", linewidth = 0.8) +
+  scale_x_continuous(
+    breaks = seq(-48, 48, by = 4),
+    limits = c(-48, 48)
+  ) +
+  labs(
+    x = "Week relative to opening",
+    y = "Wald statistic"
+  ) +
+  theme_minimal(base_size = 16) +
+  theme(
+    panel.grid.minor = element_blank(),
+    panel.grid.major.x = element_blank(),
+    plot.background = element_rect(fill = "white", color = NA),
+    panel.background = element_rect(fill = "#ECECEC", color = NA),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+
+p_fig3
+```
