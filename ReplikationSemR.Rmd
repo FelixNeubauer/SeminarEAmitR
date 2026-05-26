@@ -1342,7 +1342,7 @@ fig3_df <- read_dta("TablesFigures/Fig3_PlaceboWald.dta") %>%
 # Darstellung analog zum Stata-Graphen in Fig3.do
 p_fig3 <- ggplot(fig3_df, aes(x = wk2open, y = wald_stat)) +
   geom_hline(yintercept = 1:5, color = "#B0B4B8", linewidth = 0.8) +
-  geom_point(shape = 4, color = "#5f7f77", size = 2.2, stroke = 1.35) +
+  geom_point(shape = 4, color = "#5f7f77", size = 0.9, stroke = 1.35) +
   geom_vline(xintercept = 0, color = "red", linewidth = 0.9) +
   scale_x_continuous(
     breaks = seq(-48, 48, by = 4),
