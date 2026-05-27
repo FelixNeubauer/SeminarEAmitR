@@ -1331,6 +1331,108 @@ kbl(
 
 ##### Figure 3
 
+##### Table 5
+
+```{r table5_subsamples_launch, results='asis', echo=FALSE}
+# Replikation von ReplicaCodes/Tab5.do
+# Laut Replication README ist BaseSamp.dta der Basissample-Datensatz für die meisten Hauptergebnisse.
+tab5_data <- read_dta("Data/BaseSamp.dta") %>%
+  mutate(
+    post = as.numeric(wk2open >= 0),
+    TP = treat * post,
+    early_lines = as.numeric(opendate <= as.Date("2017-01-31")),
+    mid_lines = as.numeric(opendate > as.Date("2017-01-31") & opendate <= as.Date("2017-11-30")),
+    late_lines = as.numeric(opendate > as.Date("2017-11-30"))
+  )
+
+run_tab5 <- function(data, group = "all") {
+  data_use <- switch(
+    group,
+    all = data %>% filter(between(wk2open, -6, 3)),
+    early = data %>% filter(early_lines == 1, between(wk2open, -6, 47)),
+    mid = data %>% filter(mid_lines == 1, between(wk2open, -20, 20)),
+    late = data %>% filter(late_lines == 1, between(wk2open, -47, 3))
+  )
+  feols(
+    lnspd_res ~ TP + treat | linkid + case_wk2open + yrwk[lnpop] + yrwk[lngdppc],
+    cluster = ~case,
+    data = data_use
+  )
+}
+
+tab5_mod1 <- run_tab5(tab5_data, "all")
+tab5_mod2 <- run_tab5(tab5_data, "early")
+tab5_mod3 <- run_tab5(tab5_data, "mid")
+tab5_mod4 <- run_tab5(tab5_data, "late")
+
+tab5_bstrp <- read_dta("TablesFigures/Tab5_Bstrp.dta")
+ci95 <- function(x) quantile(x, probs = c(0.025, 0.975), na.rm = TRUE)
+ci2 <- ci95(tab5_bstrp$Col2_1)
+ci3 <- ci95(tab5_bstrp$Col3_1)
+ci4 <- ci95(tab5_bstrp$Col4_1)
+
+fmt_coef <- function(m) sprintf("%.3f", coef(m)[["TP"]])
+fmt_se <- function(m) sprintf("(%.3f)", sqrt(vcov(m)[["TP", "TP"]]))
+fmt_ci <- function(ci) sprintf("[%.3f, %.3f]", ci[1], ci[2])
+fmt_n <- function(m) formatC(nobs(m), format = "d", big.mark = ",")
+fmt_n_treated <- function(data, var) {
+  data %>%
+    filter(.data[[var]] == 1, treat == 1) %>%
+    summarise(n = n_distinct(case)) %>%
+    pull(n)
+}
+
+table5 <- tibble::tibble(
+  term = c(
+    "Treated × post",
+    "",
+    "Range of weeks relative to opening",
+    "Number of treated lines",
+    "",
+    "Observations"
+  ),
+  `1` = c(fmt_coef(tab5_mod1), fmt_se(tab5_mod1), "[-6, 3]", "45", "", fmt_n(tab5_mod1)),
+  `2` = c(fmt_coef(tab5_mod2), fmt_ci(ci2), "[-6, 47]", as.character(fmt_n_treated(tab5_data, "early_lines")), "", fmt_n(tab5_mod2)),
+  `3` = c(fmt_coef(tab5_mod3), fmt_ci(ci3), "[-20, 20]", as.character(fmt_n_treated(tab5_data, "mid_lines")), "", fmt_n(tab5_mod3)),
+  `4` = c(fmt_coef(tab5_mod4), fmt_ci(ci4), "[-47, 3]", as.character(fmt_n_treated(tab5_data, "late_lines")), "", fmt_n(tab5_mod4))
+)
+
+kbl(
+  table5,
+  format = "html",
+  align = c("l", rep("c", 4)),
+  col.names = c("", "All lines<br>(1)", "Before 1/31/17<br>(2)", "2/1/17–11/30/17<br>(3)", "After 12/1/17<br>(4)"),
+  escape = FALSE,
+  caption = "Table 5—Subsamples by Time of Launch",
+  table.attr = 'class="table5-original"'
+) %>%
+  kable_styling(
+    full_width = FALSE,
+    position = "center",
+    bootstrap_options = NULL,
+    font_size = 18,
+    html_font = "Times New Roman"
+  ) %>%
+  footnote(
+    general = paste0(
+      "The dependent variable is a segment's weekly average log residual speed. ",
+      "All models are estimated using the stacked DID model. In column 1, standard errors are in parentheses, ",
+      "clustered at the group level. In columns 2 to 4, numbers in brackets are 95 percent confidence intervals ",
+      "from 499 repetitions of wild block bootstrapping."
+    ),
+    general_title = "Notes:",
+    footnote_as_chunk = TRUE,
+    escape = FALSE
+  )
+```
+
+```{css, echo=FALSE}
+.table5-original thead th {
+  text-align: center !important;
+  font-weight: normal !important;
+}
+```
+
 ```{r fig3_data, echo=FALSE, include=FALSE}
 # Replikation von ReplicaCodes/Fig3.do (Teil III: Graph auf Basis von Fig3_PlaceboWald.dta)
 fig3_df <- read_dta("TablesFigures/Fig3_PlaceboWald.dta") %>%
