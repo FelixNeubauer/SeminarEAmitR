@@ -1568,3 +1568,129 @@ p_fig4 <- ggplot(fig4_df, aes(x = wk2open, y = coef)) +
 
 p_fig4
 ```
+
+##### Figure 5
+```{r fig5_data, echo=FALSE}
+fig5_base <- haven::read_dta("Data/BaseSamp.dta")
+
+fit_fig5_panel <- function(data, wk_min, wk_max) {
+  d <- data %>%
+    filter(between(wk2open, wk_min, wk_max))
+
+  for (w in wk_min:-2) {
+    d[[paste0("Am", abs(w))]] <- d$treat * as.numeric(d$wk2open == w)
+  }
+  d$A0 <- d$treat * as.numeric(d$wk2open == 0)
+  for (w in 1:wk_max) {
+    d[[paste0("Ap", w)]] <- d$treat * as.numeric(d$wk2open == w)
+  }
+
+  rhs_terms <- c(paste0("Am", abs(wk_min):2), "A0", paste0("Ap", 1:wk_max), "post", "treat")
+  form <- as.formula(
+    paste0(
+      "lnspd_res ~ ", paste(rhs_terms, collapse = " + "),
+      " | linkid + case_wk2open + yrwk[lnpop] + yrwk[lngdppc]"
+    )
+  )
+
+  mod <- feols(form, cluster = ~case, data = d %>% mutate(post = as.numeric(wk2open >= 0)))
+
+  weeks <- wk_min:wk_max
+  out <- tibble(week = weeks, estimate = NA_real_, std_error = NA_real_)
+
+  for (i in seq_along(weeks)) {
+    w <- weeks[i]
+    if (w <= -2) {
+      nm <- paste0("Am", abs(w))
+      out$estimate[i] <- unname(coef(mod)[nm])
+      out$std_error[i] <- sqrt(vcov(mod)[nm, nm])
+    } else if (w == -1) {
+      out$estimate[i] <- 0
+      out$std_error[i] <- 0
+    } else if (w == 0) {
+      out$estimate[i] <- unname(coef(mod)["A0"])
+      out$std_error[i] <- sqrt(vcov(mod)["A0", "A0"])
+    } else {
+      nm <- paste0("Ap", w)
+      out$estimate[i] <- unname(coef(mod)[nm])
+      out$std_error[i] <- sqrt(vcov(mod)[nm, nm])
+    }
+  }
+
+  out %>%
+    mutate(
+      ci_low = estimate - 1.96 * std_error,
+      ci_high = estimate + 1.96 * std_error
+    )
+}
+
+fig5_a_df <- fit_fig5_panel(
+  fig5_base %>% filter(opendate <= as.Date("2017-01-31")),
+  wk_min = -6,
+  wk_max = 47
+)
+fig5_b_df <- fit_fig5_panel(
+  fig5_base %>% filter(opendate > as.Date("2017-01-31") & opendate <= as.Date("2017-11-30")),
+  wk_min = -20,
+  wk_max = 20
+)
+fig5_c_df <- fit_fig5_panel(
+  fig5_base %>% filter(opendate > as.Date("2017-11-30")),
+  wk_min = -48,
+  wk_max = 3
+)
+
+plot_fig5_panel <- function(df, panel_title, x_breaks, x_limits, y_breaks, y_limits) {
+  ggplot(df, aes(x = week, y = estimate)) +
+    geom_errorbar(aes(ymin = ci_low, ymax = ci_high), width = 0, color = "#6d8d84", linewidth = 0.55) +
+    geom_point(color = "#6d8d84", size = 1.8) +
+    geom_vline(xintercept = 0, color = "#c23b55", linewidth = 0.7) +
+    scale_x_continuous(breaks = x_breaks, limits = x_limits) +
+    scale_y_continuous(breaks = y_breaks, limits = y_limits) +
+    labs(title = panel_title, x = "Weeks to subway opening", y = NULL) +
+    theme_minimal(base_size = 11) +
+    theme(
+      plot.title = element_text(hjust = 0, face = "plain"),
+      panel.grid.minor = element_blank(),
+      axis.text.x = element_text(angle = 45, hjust = 1)
+    )
+}
+
+p_fig5_a <- plot_fig5_panel(
+  fig5_a_df,
+  "Panel A. Lines launched before January 31, 2017",
+  x_breaks = seq(-8, 48, 4),
+  x_limits = c(-8, 48),
+  y_breaks = seq(-0.05, 0.15, 0.05),
+  y_limits = c(-0.055, 0.155)
+)
+
+p_fig5_b <- plot_fig5_panel(
+  fig5_b_df,
+  "Panel B. Lines launched between February 1, 2017 and November 30, 2017",
+  x_breaks = seq(-20, 20, 4),
+  x_limits = c(-20, 20),
+  y_breaks = seq(-0.10, 0.15, 0.05),
+  y_limits = c(-0.105, 0.155)
+)
+
+p_fig5_c <- plot_fig5_panel(
+  fig5_c_df,
+  "Panel C. Lines launched after December 1, 2017",
+  x_breaks = seq(-48, 4, 4),
+  x_limits = c(-48, 4),
+  y_breaks = seq(-0.10, 0.05, 0.05),
+  y_limits = c(-0.11, 0.06)
+)
+```
+
+```{r fig5_combined, echo=FALSE, fig.width=10, fig.height=7.5}
+(
+  (p_fig5_a | p_fig5_b) /
+  (p_fig5_c | plot_spacer())
+) +
+  plot_layout(
+    widths = c(1, 1),
+    heights = c(1, 1)
+  )
+```
