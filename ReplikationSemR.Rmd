@@ -18,6 +18,11 @@ library(grid)
 library(lubridate)
 library(knitr)
 library(kableExtra)
+library(fixest)
+library(broom)
+library(purrr)
+library(patchwork)
+library(readr)
 ```
 
 
@@ -1002,14 +1007,6 @@ kable(
 ```
 
 ##### Figure 2
-```{r fig2_libraries, include=FALSE}
-library(fixest)
-library(broom)
-library(purrr)
-library(patchwork)
-library(readr)
-```
-
 ```{r fig2_data, echo=FALSE}
 base_samp <- read_dta("Data/BaseSamp.dta") %>%
   filter(between(wk2open, -6, 47))
@@ -1693,4 +1690,280 @@ p_fig5_c <- plot_fig5_panel(
     widths = c(1, 1),
     heights = c(1, 1)
   )
+```
+
+##### Figure 6
+
+Für Figure 6 werden entsprechend der Stata-Replikationsdatei `ReplicaCodes/Fig6.do` drei Datensätze benötigt: `Data/ExtendSample.dta` als Hauptdatensatz sowie `Data/WithAgainstTraffic.dta` und `Data/RushNonrusHours.dta` für die beiden Heterogenitätsgruppen nach Fahrtrichtung und Tageszeit.
+
+```{r fig6_data_and_estimation, echo=FALSE}
+fig6_base <- read_dta("Data/ExtendSample.dta") %>%
+  mutate(
+    Dp_Roadtype12 = Dp * as.numeric(roadtype %in% c(1, 2)),
+    Dp_Roadtype3 = Dp * as.numeric(roadtype == 3),
+    Dp_Roadtype4 = Dp * as.numeric(roadtype == 4),
+    Dp_dist2line_0to1 = Dp * as.numeric(between(link2_nearest_treat_line_km, 0, 1)),
+    Dp_dist2line_1to2p5 = Dp * as.numeric(between(link2_nearest_treat_line_km, 1, 2.5)),
+    Dp_same_direct = Dp * same_direct,
+    Dp_diff_direct = Dp * as.numeric(same_direct == 0),
+    Dp_MostAffectedLinks = Dp * MostAffectedLinks,
+    Dp_NonMostAffectedLinks = Dp * as.numeric(MostAffectedLinks == 0),
+    Dp_MoreCongested = Dp * as.numeric(MoreCongested == 1),
+    Dp_LessCongested = Dp * as.numeric(MoreCongested == 0),
+    row_id_fig6 = row_number()
+  )
+
+fig6_estimation_data <- function(model, data) {
+  rows <- seq_len(nrow(data))
+
+  if (!is.null(model$obs_selection)) {
+    for (selection in model$obs_selection) {
+      if (is.logical(selection)) {
+        rows <- rows[selection]
+      } else if (is.numeric(selection) && length(selection) > 0) {
+        rows <- rows[selection]
+      }
+    }
+  }
+
+  data[rows, , drop = FALSE]
+}
+
+fig6_coef_row <- function(model, term, y_position, ci_var, ci_filter, label, data_for_mean) {
+  td <- broom::tidy(model)
+  hit <- td %>% filter(term == !!term)
+  est_data <- fig6_estimation_data(model, data_for_mean)
+
+  tibble(
+    y_position = y_position,
+    label = label,
+    estimate = hit$estimate[1],
+    std_error = hit$std.error[1],
+    avg_congestion = est_data %>%
+      filter({{ ci_filter }}) %>%
+      summarise(avg = mean(.data[[ci_var]], na.rm = TRUE)) %>%
+      pull(avg)
+  )
+}
+
+fig6_base_filter <- fig6_base %>%
+  filter(link2_nearest_treat_line_km <= 2.5 | treat == 0)
+
+mod_fig6_all <- feols(
+  lnspd_res ~ Dp + treat | case_wk2open + case_linkid + yrwk[lnpop] + yrwk[lngdppc],
+  cluster = ~case,
+  data = fig6_base_filter
+)
+
+fig6_direct <- fig6_base_filter %>%
+  mutate(
+    hetero = if_else(MostAffectedLinks == 1, 1, 2),
+    case_wk2open_hetero = interaction(case, wk2open, hetero, drop = TRUE)
+  )
+mod_fig6_direct <- feols(
+  lnspd_res ~ Dp_NonMostAffectedLinks + Dp_MostAffectedLinks + treat |
+    case_wk2open + case_linkid + case_wk2open_hetero + yrwk[lnpop] + yrwk[lngdppc],
+  cluster = ~case,
+  data = fig6_direct
+)
+
+fig6_distance <- fig6_base %>%
+  filter(link2_nearest_treat_line_km <= 2.5) %>%
+  mutate(
+    hetero = case_when(
+      between(link2_nearest_treat_line_km, 0, 1) ~ 1,
+      between(link2_nearest_treat_line_km, 1, 2.5) ~ 2,
+      TRUE ~ NA_real_
+    ),
+    case_wk2open_hetero = interaction(case, wk2open, hetero, drop = TRUE)
+  )
+mod_fig6_distance <- feols(
+  lnspd_res ~ Dp_dist2line_0to1 + Dp_dist2line_1to2p5 + treat |
+    case_wk2open + case_linkid + case_wk2open_hetero + yrwk[lnpop] + yrwk[lngdppc],
+  cluster = ~case,
+  data = fig6_distance
+)
+
+fig6_direction <- fig6_base_filter %>%
+  mutate(
+    hetero = case_when(
+      same_direct == 1 ~ 1,
+      same_direct == 0 ~ 2,
+      TRUE ~ NA_real_
+    ),
+    case_wk2open_hetero = interaction(case, wk2open, hetero, drop = TRUE)
+  )
+mod_fig6_direction <- feols(
+  lnspd_res ~ Dp_same_direct + Dp_diff_direct + treat |
+    case_wk2open + case_linkid + case_wk2open_hetero + yrwk[lnpop] + yrwk[lngdppc],
+  cluster = ~case,
+  data = fig6_direction
+)
+
+fig6_congestion <- fig6_base_filter %>%
+  mutate(
+    hetero = case_when(
+      MoreCongested == 1 ~ 1,
+      MoreCongested == 0 ~ 2,
+      TRUE ~ NA_real_
+    ),
+    case_wk2open_hetero = interaction(case, wk2open, hetero, drop = TRUE)
+  )
+mod_fig6_congestion <- feols(
+  lnspd_res ~ Dp_MoreCongested + Dp_LessCongested + treat |
+    case_wk2open + case_linkid + case_wk2open_hetero + yrwk[lnpop] + yrwk[lngdppc],
+  cluster = ~case,
+  data = fig6_congestion
+)
+
+fig6_roadtype <- fig6_base_filter %>%
+  mutate(
+    hetero = case_when(
+      roadtype %in% c(1, 2) ~ 1,
+      roadtype == 3 ~ 2,
+      roadtype == 4 | is.na(roadtype) ~ 3,
+      TRUE ~ NA_real_
+    ),
+    case_wk2open_hetero = interaction(case, wk2open, hetero, drop = TRUE)
+  )
+mod_fig6_roadtype <- feols(
+  lnspd_res ~ Dp_Roadtype12 + Dp_Roadtype3 + Dp_Roadtype4 + treat |
+    case_wk2open + case_linkid + case_wk2open_hetero + yrwk[lnpop] + yrwk[lngdppc],
+  cluster = ~case,
+  data = fig6_roadtype
+)
+
+fig6_with_traffic <- fig6_base %>%
+  inner_join(
+    read_dta("Data/WithAgainstTraffic.dta") %>%
+      select(case, linkid, wk2open, WithTraffic, lnspd_res_WithAgainstTraffic, CI_WithAgainstTraffic),
+    by = c("case", "linkid", "wk2open")
+  ) %>%
+  filter(!is.na(WithTraffic), link2_nearest_treat_line_km <= 2.5 | treat == 0) %>%
+  mutate(
+    Dp_WithTraffic = Dp * as.numeric(WithTraffic == 1),
+    Dp_AgainstTraffic = Dp * as.numeric(WithTraffic == 0),
+    hetero = if_else(WithTraffic == 0, 1, 2),
+    case_wk2open_hetero = interaction(case, wk2open, hetero, drop = TRUE)
+  )
+mod_fig6_with_traffic <- feols(
+  lnspd_res_WithAgainstTraffic ~ Dp_WithTraffic + Dp_AgainstTraffic + treat |
+    case_wk2open + case_linkid + case_wk2open_hetero + yrwk[lnpop] + yrwk[lngdppc],
+  cluster = ~case,
+  data = fig6_with_traffic
+)
+
+fig6_rush <- fig6_base %>%
+  select(-any_of(c("lnspd_res", "CI_res", "CI", "speed", "lnspd"))) %>%
+  inner_join(
+    read_dta("Data/RushNonrusHours.dta") %>%
+      select(case, linkid, wk2open, rushhour, lnspd_res, CI),
+    by = c("case", "linkid", "wk2open")
+  ) %>%
+  filter(!is.na(rushhour), link2_nearest_treat_line_km <= 2.5 | treat == 0) %>%
+  mutate(
+    Dp_Rush = Dp * as.numeric(rushhour == 1),
+    Dp_NoRush = Dp * as.numeric(rushhour == 0),
+    hetero = if_else(rushhour == 0, 1, 2),
+    case_wk2open_hetero = interaction(case, wk2open, hetero, drop = TRUE),
+    link_rushhour = interaction(linkid, rushhour, drop = TRUE)
+  )
+mod_fig6_rush <- feols(
+  lnspd_res ~ Dp_Rush + Dp_NoRush + treat |
+    case_linkid + case_wk2open_hetero + link_rushhour + yrwk[lnpop] + yrwk[lngdppc],
+  cluster = ~case,
+  data = fig6_rush
+)
+
+fig6_line_distance <- fig6_base %>%
+  filter(link2_nearest_line_km <= 2.5 | treat == 0) %>%
+  mutate(
+    Dp_DistCat1 = Dp * as.numeric(between(link2_nearest_treat_line_km, 0, 1)),
+    Dp_DistCat2 = Dp * as.numeric(between(link2_nearest_treat_line_km, 1, 2.5)),
+    Dp_DistCat3 = Dp * as.numeric(link2_nearest_treat_line_km >= 2.5 & between(link2_nearest_line_km, 0, 1)),
+    Dp_DistCat4 = Dp * as.numeric(link2_nearest_treat_line_km >= 2.5 & between(link2_nearest_line_km, 1, 2.5))
+  )
+mod_fig6_line_distance <- feols(
+  lnspd_res ~ Dp_DistCat1 + Dp_DistCat2 + Dp_DistCat3 + Dp_DistCat4 + treat |
+    case_wk2open + case_linkid + yrwk[lnpop] + yrwk[lngdppc],
+  cluster = ~case,
+  data = fig6_line_distance
+)
+
+fig6_results <- bind_rows(
+  fig6_coef_row(mod_fig6_all, "Dp", 1, "CI", TRUE, "All", fig6_base_filter),
+  fig6_coef_row(mod_fig6_direct, "Dp_MostAffectedLinks", 3, "CI", MostAffectedLinks == 1, "Directly affected", fig6_direct),
+  fig6_coef_row(mod_fig6_direct, "Dp_NonMostAffectedLinks", 4, "CI", MostAffectedLinks == 0, "Non-directly affected", fig6_direct),
+  fig6_coef_row(mod_fig6_distance, "Dp_dist2line_0to1", 6, "CI", between(link2_nearest_treat_line_km, 0, 1), "d1 = [0, 1]", fig6_distance),
+  fig6_coef_row(mod_fig6_distance, "Dp_dist2line_1to2p5", 7, "CI", between(link2_nearest_treat_line_km, 1, 2.5), "d1 = (1, 2.5]", fig6_distance),
+  fig6_coef_row(mod_fig6_direction, "Dp_same_direct", 9, "CI", same_direct == 1, "Parallel", fig6_direction),
+  fig6_coef_row(mod_fig6_direction, "Dp_diff_direct", 10, "CI", same_direct == 0, "Orthogonal", fig6_direction),
+  fig6_coef_row(mod_fig6_congestion, "Dp_MoreCongested", 12, "CI", MoreCongested == 1, "More congested", fig6_congestion),
+  fig6_coef_row(mod_fig6_congestion, "Dp_LessCongested", 13, "CI", MoreCongested == 0, "Less congested", fig6_congestion),
+  fig6_coef_row(mod_fig6_roadtype, "Dp_Roadtype12", 15, "CI", roadtype %in% c(1, 2), "Highway/expressway", fig6_roadtype),
+  fig6_coef_row(mod_fig6_roadtype, "Dp_Roadtype3", 16, "CI", roadtype == 3, "Arterial roads", fig6_roadtype),
+  fig6_coef_row(mod_fig6_roadtype, "Dp_Roadtype4", 17, "CI", roadtype == 4, "Subarterial roads", fig6_roadtype),
+  fig6_coef_row(mod_fig6_with_traffic, "Dp_WithTraffic", 19, "CI_WithAgainstTraffic", WithTraffic == 1, "With traffic", fig6_with_traffic),
+  fig6_coef_row(mod_fig6_with_traffic, "Dp_AgainstTraffic", 20, "CI_WithAgainstTraffic", WithTraffic == 0, "Against traffic", fig6_with_traffic),
+  fig6_coef_row(mod_fig6_rush, "Dp_Rush", 22, "CI", rushhour == 1, "Rush hour", fig6_rush),
+  fig6_coef_row(mod_fig6_rush, "Dp_NoRush", 23, "CI", rushhour == 0, "Off-peak hour", fig6_rush),
+  fig6_coef_row(mod_fig6_line_distance, "Dp_DistCat1", 25, "CI", between(link2_nearest_treat_line_km, 0, 1), "d1 = [0, 1]", fig6_line_distance),
+  fig6_coef_row(mod_fig6_line_distance, "Dp_DistCat2", 26, "CI", between(link2_nearest_treat_line_km, 1, 2.5), "d1 = (1, 2.5]", fig6_line_distance),
+  fig6_coef_row(mod_fig6_line_distance, "Dp_DistCat3", 27, "CI", link2_nearest_treat_line_km >= 2.5 & between(link2_nearest_line_km, 0, 1), "d1 = (2.5, .), d2 = [0, 1]", fig6_line_distance),
+  fig6_coef_row(mod_fig6_line_distance, "Dp_DistCat4", 28, "CI", link2_nearest_treat_line_km >= 2.5 & between(link2_nearest_line_km, 1, 2.5), "d1 = (2.5, .), d2 = (1, .)", fig6_line_distance)
+) %>%
+  mutate(
+    ci_low = estimate - 1.96 * std_error,
+    ci_high = estimate + 1.96 * std_error,
+    text_label = paste0(
+      format(round(estimate, 3), nsmall = 3, trim = TRUE),
+      " (",
+      format(round(std_error, 3), nsmall = 3, trim = TRUE),
+      ")        ",
+      format(round(avg_congestion, 2), nsmall = 2, trim = TRUE)
+    )
+  )
+```
+
+```{r fig6_plot, echo=FALSE, fig.width=7.4, fig.height=7.4}
+fig6_axis_labels <- fig6_results$label
+names(fig6_axis_labels) <- -fig6_results$y_position
+
+p_fig6 <- ggplot(fig6_results, aes(y = -y_position)) +
+  geom_rect(aes(xmin = 0, xmax = estimate, ymin = -y_position - 0.39, ymax = -y_position + 0.39), fill = "#6d9996", color = "#2c5673", linewidth = 0.8) +
+  geom_segment(aes(x = ci_low, xend = ci_high, yend = -y_position), color = "#9c2f34", linewidth = 0.65) +
+  geom_segment(aes(x = ci_low, xend = ci_low, y = -y_position - 0.25, yend = -y_position + 0.25), color = "#9c2f34", linewidth = 0.65) +
+  geom_segment(aes(x = ci_high, xend = ci_high, y = -y_position - 0.25, yend = -y_position + 0.25), color = "#9c2f34", linewidth = 0.65) +
+  geom_vline(xintercept = 0, color = "black", linewidth = 0.55) +
+  geom_hline(yintercept = -24, color = "#7f7f7f", linetype = "dashed", linewidth = 0.7) +
+  geom_text(aes(x = 0.082, label = text_label), hjust = 0, size = 3.15, family = "serif") +
+  annotate("text", x = 0.082, y = 0.35, label = "Coefficient (SE)   Average\n                     congestion index", hjust = 0, size = 3.15, family = "serif", lineheight = 0.9) +
+  scale_y_continuous(
+    breaks = c(0, -fig6_results$y_position),
+    labels = c(" ", fig6_axis_labels),
+    limits = c(-29.2, 1.2),
+    expand = expansion(mult = c(0.01, 0.01))
+  ) +
+  scale_x_continuous(
+    breaks = c(-0.01, 0, 0.05, 0.10, 0.15),
+    labels = c("−0.01", "0", "0.05", "0.1", "0.15"),
+    limits = c(-0.015, 0.153),
+    expand = expansion(mult = c(0, 0))
+  ) +
+  labs(x = "Coefficient", y = NULL, caption = "Figure 6. Heterogeneous Effects by Road Segment Characteristics") +
+  theme_minimal(base_family = "serif", base_size = 11) +
+  theme(
+    panel.grid.major.y = element_line(color = "#d2d2d2", linewidth = 0.45),
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line.x = element_line(color = "#333333", linewidth = 0.5),
+    axis.line.y = element_line(color = "#333333", linewidth = 0.5),
+    axis.text.y = element_text(color = "#222222", size = 9.6),
+    axis.text.x = element_text(color = "#222222", size = 9.6),
+    axis.title.x = element_text(margin = margin(t = 10), size = 11),
+    plot.caption = element_text(hjust = 0.5, face = "bold", size = 10, margin = margin(t = 18)),
+    plot.margin = margin(8, 6, 8, 6)
+  )
+
+p_fig6
 ```
