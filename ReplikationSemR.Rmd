@@ -1967,3 +1967,147 @@ p_fig6 <- ggplot(fig6_results, aes(y = -y_position)) +
 
 p_fig6
 ```
+
+
+##### Figure 7
+
+Die Replikations-README ordnet Figure 7 keiner Stata-Datei und keinem Datensatz zu: Figure 7 ist eine theoretische Illustration des Wohlfahrtseffekts, deshalb gibt es laut README „no code associated with it“. Für die Rmd wird die Grafik daher direkt aus geometrischen Hilfsdaten erzeugt. Die Form orientiert sich an der im Paper gezeigten Illustration: Der rote Bereich `A` zeigt den Wohlfahrtsgewinn der weiterhin per Auto pendelnden Personen, der blau schraffierte Bereich `B` den Wohlfahrtsgewinn der Wechsler zur U-Bahn.
+
+```{r fig7_data, echo=FALSE}
+# Figure 7 ist nicht empirisch; entsprechend der Replication-README existieren
+# keine Stata-Replikationsdateien und keine .dta-Daten für diese Abbildung.
+# Die folgenden Datenpunkte sind daher reine Konstruktionskoordinaten für die
+# theoretische Wohlfahrtsillustration.
+fig7_x_star <- 0.42
+fig7_y_axis <- 0.10
+fig7_y_floor <- 0.00
+
+fig7_y_subway <- function(x) 0.82 - 0.70 * x
+fig7_y_road <- function(x) 0.105 + 0.78 * x
+fig7_y_shifted_road <- function(x) 0.225 + 0.71 * x
+fig7_y_star <- fig7_y_subway(fig7_x_star)
+
+fig7_left_area <- tibble(
+  x = c(0, fig7_x_star, 0),
+  y = c(fig7_y_shifted_road(0), fig7_y_star, fig7_y_subway(0))
+)
+
+fig7_right_area <- tibble(
+  x = c(fig7_x_star, 1, 1, fig7_x_star),
+  y = c(fig7_y_star, fig7_y_shifted_road(1), fig7_y_road(1), fig7_y_road(fig7_x_star))
+)
+
+fig7_curve_data <- tibble(x = seq(0, 1, length.out = 200)) %>%
+  mutate(
+    subway = fig7_y_subway(x),
+    road = fig7_y_road(x),
+    shifted_road = fig7_y_shifted_road(x)
+  )
+
+fig7_hatch_segments <- map_dfr(seq(-0.23, fig7_y_subway(0), by = 0.075), function(intercept) {
+  hatch_points <- tibble(x = seq(0, fig7_x_star, length.out = 350)) %>%
+    mutate(
+      y = 1.62 * x + intercept,
+      inside = y >= fig7_y_shifted_road(x) & y <= fig7_y_subway(x)
+    ) %>%
+    filter(inside)
+
+  if (nrow(hatch_points) < 2) {
+    return(tibble())
+  }
+
+  tibble(
+    x = first(hatch_points$x),
+    xend = last(hatch_points$x),
+    y = first(hatch_points$y),
+    yend = last(hatch_points$y)
+  )
+})
+```
+
+```{r fig7_plot, echo=FALSE, fig.width=7.2, fig.height=5.7}
+p_fig7 <- ggplot() +
+  geom_polygon(
+    data = fig7_left_area,
+    aes(x = x, y = y),
+    fill = "white",
+    color = NA
+  ) +
+  geom_segment(
+    data = fig7_hatch_segments,
+    aes(x = x, xend = xend, y = y, yend = yend),
+    color = "#69c6ef",
+    linewidth = 2.1,
+    alpha = 0.82,
+    lineend = "butt"
+  ) +
+  geom_polygon(
+    data = fig7_right_area,
+    aes(x = x, y = y),
+    fill = "#c98b7d",
+    color = NA,
+    alpha = 0.96
+  ) +
+  geom_line(
+    data = fig7_curve_data,
+    aes(x = x, y = subway),
+    color = "#6b6f72",
+    linewidth = 0.9
+  ) +
+  geom_line(
+    data = fig7_curve_data,
+    aes(x = x, y = road),
+    color = "#6b6f72",
+    linewidth = 0.9
+  ) +
+  geom_line(
+    data = fig7_curve_data,
+    aes(x = x, y = shifted_road),
+    color = "#1d252b",
+    linewidth = 1.65,
+    linetype = "11"
+  ) +
+  geom_segment(aes(x = 0, xend = 1, y = fig7_y_axis, yend = fig7_y_axis), color = "#6b6f72", linewidth = 0.75) +
+  geom_segment(aes(x = 0, xend = 0, y = fig7_y_floor, yend = 1), color = "#1f1f1f", linewidth = 0.8) +
+  geom_segment(aes(x = 1, xend = 1, y = fig7_y_floor, yend = 1), color = "#1f1f1f", linewidth = 0.8) +
+  geom_segment(aes(x = 0, xend = 0, y = fig7_y_floor, yend = fig7_y_axis), color = "#6b6f72", linewidth = 0.9, linetype = "42") +
+  geom_segment(aes(x = fig7_x_star, xend = fig7_x_star, y = fig7_y_floor, yend = fig7_y_star), color = "#6b6f72", linewidth = 0.9, linetype = "42") +
+  geom_segment(aes(x = 1, xend = 1, y = fig7_y_floor, yend = fig7_y_axis), color = "#6b6f72", linewidth = 0.9, linetype = "42") +
+  geom_segment(aes(x = 0, xend = 1, y = fig7_y_floor, yend = fig7_y_floor), color = "#6b6f72", linewidth = 0.9, linetype = "42") +
+  geom_segment(aes(x = 0.08, xend = 0.30, y = 0.075, yend = 0.075), arrow = arrow(length = unit(0.13, "cm"), type = "closed"), linewidth = 0.45, color = "black") +
+  geom_segment(aes(x = 0.90, xend = 0.70, y = 0.075, yend = 0.075), arrow = arrow(length = unit(0.13, "cm"), type = "closed"), linewidth = 0.45, color = "black") +
+  geom_segment(aes(x = 0.94, xend = 0.92, y = 0.95, yend = fig7_y_shifted_road(0.92)), color = "#6b6f72", linewidth = 0.8, linetype = "42") +
+  geom_segment(aes(x = 0.78, xend = 0.90, y = 0.88, yend = fig7_y_shifted_road(0.90)), color = "#6b6f72", linewidth = 0.8, linetype = "42") +
+  annotate("text", x = 0.60, y = 0.64, label = "A", family = "serif", fontface = "italic", size = 4.5) +
+  annotate("text", x = 0.19, y = 0.47, label = "B", family = "serif", fontface = "italic", size = 4.5) +
+  annotate("text", x = 0.085, y = 0.70, label = "u[s] + xi[is]", parse = TRUE, family = "serif", size = 3.4) +
+  annotate("text", x = 0.88, y = 0.97, label = "u[a] + xi[ia]", parse = TRUE, family = "serif", size = 3.6) +
+  annotate("text", x = 0.75, y = 0.90, label = "u[a] + Delta*u[a] + xi[ia]", parse = TRUE, family = "serif", size = 3.4) +
+  annotate("text", x = 0.19, y = 0.035, label = "N[s]", parse = TRUE, family = "serif", size = 3.6) +
+  annotate("text", x = 0.86, y = 0.035, label = "N[a]", parse = TRUE, family = "serif", size = 3.6) +
+  annotate("text", x = 0.19, y = 0.070, label = "ξ_is ↑ relative to ξ_ia", family = "serif", size = 3.25) +
+  annotate("text", x = 0.86, y = 0.070, label = "ξ_ia ↑ relative to ξ_is", family = "serif", size = 3.25) +
+  labs(
+    x = NULL,
+    y = NULL,
+    caption = "Figure 7. Illustration of the Welfare Impact"
+  ) +
+  coord_cartesian(xlim = c(0, 1), ylim = c(0, 1), clip = "off") +
+  theme_void(base_family = "serif") +
+  theme(
+    plot.caption = element_text(hjust = 0.5, face = "bold", size = 10, margin = margin(t = 15)),
+    plot.margin = margin(8, 22, 8, 22)
+  )
+
+p_fig7
+```
+
+```{r fig7_save, include=FALSE}
+ggsave(
+  filename = "FertigeGrafiken/Fig7_R.png",
+  plot = p_fig7,
+  width = 7.2,
+  height = 5.7,
+  dpi = 300
+)
+```
