@@ -1971,7 +1971,7 @@ p_fig6
 
 ##### Figure 7
 
-Die Replikations-README ordnet Figure 7 keiner Stata-Datei und keinem Datensatz zu: Figure 7 ist eine theoretische Illustration des Wohlfahrtseffekts, deshalb gibt es laut README „no code associated with it“. Für die Rmd wird die Grafik daher direkt aus geometrischen Hilfsdaten erzeugt. Die Form orientiert sich an der im Paper gezeigten Illustration: Der rote Bereich `A` zeigt den Wohlfahrtsgewinn der weiterhin per Auto pendelnden Personen, der blau schraffierte Bereich `B` den Wohlfahrtsgewinn der Wechsler zur U-Bahn.
+Die Replikations-README ordnet Figure 7 keiner Stata-Datei und keinem Datensatz zu: Figure 7 ist eine theoretische Illustration des Wohlfahrtseffekts, deshalb gibt es laut README „no code associated with it“. Für die Rmd wird die Grafik daher direkt aus geometrischen Hilfsdaten erzeugt. Die Form orientiert sich an der im Paper gezeigten Illustration: Der rote Bereich `A` zeigt den Wohlfahrtsgewinn der weiterhin per Auto pendelnden Personen, der blau gefüllte Bereich `B` den Wohlfahrtsgewinn der Wechsler zur U-Bahn.
 
 ```{r fig7_data, echo=FALSE}
 # Figure 7 ist nicht empirisch; entsprechend der Replication-README existieren
@@ -1982,10 +1982,14 @@ fig7_x_star <- 0.42
 fig7_y_axis <- 0.10
 fig7_y_floor <- 0.00
 
+fig7_road_slope <- 0.78
 fig7_y_subway <- function(x) 0.82 - 0.70 * x
-fig7_y_road <- function(x) 0.105 + 0.78 * x
-fig7_y_shifted_road <- function(x) 0.225 + 0.71 * x
+fig7_y_road <- function(x) 0.105 + fig7_road_slope * x
 fig7_y_star <- fig7_y_subway(fig7_x_star)
+# Die verschobene Autonutzenlinie verläuft parallel zur ursprünglichen
+# Autonutzenlinie und geht durch den Schnittpunkt mit der U-Bahn-Linie.
+fig7_road_shift <- fig7_y_star - fig7_y_road(fig7_x_star)
+fig7_y_shifted_road <- function(x) fig7_y_road(x) + fig7_road_shift
 
 fig7_left_area <- tibble(
   x = c(0, fig7_x_star, 0),
@@ -2003,26 +2007,6 @@ fig7_curve_data <- tibble(x = seq(0, 1, length.out = 200)) %>%
     road = fig7_y_road(x),
     shifted_road = fig7_y_shifted_road(x)
   )
-
-fig7_hatch_segments <- map_dfr(seq(-0.23, fig7_y_subway(0), by = 0.075), function(intercept) {
-  hatch_points <- tibble(x = seq(0, fig7_x_star, length.out = 350)) %>%
-    mutate(
-      y = 1.62 * x + intercept,
-      inside = y >= fig7_y_shifted_road(x) & y <= fig7_y_subway(x)
-    ) %>%
-    filter(inside)
-
-  if (nrow(hatch_points) < 2) {
-    return(tibble())
-  }
-
-  tibble(
-    x = first(hatch_points$x),
-    xend = last(hatch_points$x),
-    y = first(hatch_points$y),
-    yend = last(hatch_points$y)
-  )
-})
 ```
 
 ```{r fig7_plot, echo=FALSE, fig.width=7.2, fig.height=5.7}
@@ -2030,16 +2014,9 @@ p_fig7 <- ggplot() +
   geom_polygon(
     data = fig7_left_area,
     aes(x = x, y = y),
-    fill = "white",
-    color = NA
-  ) +
-  geom_segment(
-    data = fig7_hatch_segments,
-    aes(x = x, xend = xend, y = y, yend = yend),
-    color = "#69c6ef",
-    linewidth = 2.1,
-    alpha = 0.82,
-    lineend = "butt"
+    fill = "#9bd6f5",
+    color = NA,
+    alpha = 0.82
   ) +
   geom_polygon(
     data = fig7_right_area,
