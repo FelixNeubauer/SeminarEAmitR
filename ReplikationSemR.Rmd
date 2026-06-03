@@ -18,6 +18,11 @@ library(grid)
 library(lubridate)
 library(knitr)
 library(kableExtra)
+library(fixest)
+library(broom)
+library(purrr)
+library(patchwork)
+library(readr)
 ```
 
 
@@ -1002,14 +1007,6 @@ kable(
 ```
 
 ##### Figure 2
-```{r fig2_libraries, include=FALSE}
-library(fixest)
-library(broom)
-library(purrr)
-library(patchwork)
-library(readr)
-```
-
 ```{r fig2_data, echo=FALSE}
 base_samp <- read_dta("Data/BaseSamp.dta") %>%
   filter(between(wk2open, -6, 47))
@@ -1699,12 +1696,6 @@ p_fig5_c <- plot_fig5_panel(
 
 Für Figure 6 werden entsprechend der Stata-Replikationsdatei `ReplicaCodes/Fig6.do` drei Datensätze benötigt: `Data/ExtendSample.dta` als Hauptdatensatz sowie `Data/WithAgainstTraffic.dta` und `Data/RushNonrusHours.dta` für die beiden Heterogenitätsgruppen nach Fahrtrichtung und Tageszeit.
 
-```{r fig6_libraries, include=FALSE}
-library(fixest)
-library(broom)
-library(purrr)
-```
-
 ```{r fig6_data_and_estimation, echo=FALSE}
 fig6_base <- read_dta("Data/ExtendSample.dta") %>%
   mutate(
@@ -1843,7 +1834,11 @@ mod_fig6_roadtype <- feols(
 )
 
 fig6_with_traffic <- fig6_base %>%
-  inner_join(read_dta("Data/WithAgainstTraffic.dta"), by = c("case", "linkid", "wk2open")) %>%
+  inner_join(
+    read_dta("Data/WithAgainstTraffic.dta") %>%
+      select(case, linkid, wk2open, WithTraffic, lnspd_res_WithAgainstTraffic, CI_WithAgainstTraffic),
+    by = c("case", "linkid", "wk2open")
+  ) %>%
   filter(!is.na(WithTraffic), link2_nearest_treat_line_km <= 2.5 | treat == 0) %>%
   mutate(
     Dp_WithTraffic = Dp * as.numeric(WithTraffic == 1),
@@ -1860,7 +1855,11 @@ mod_fig6_with_traffic <- feols(
 
 fig6_rush <- fig6_base %>%
   select(-any_of(c("lnspd_res", "CI_res", "CI", "speed", "lnspd"))) %>%
-  inner_join(read_dta("Data/RushNonrusHours.dta"), by = c("case", "linkid", "wk2open")) %>%
+  inner_join(
+    read_dta("Data/RushNonrusHours.dta") %>%
+      select(case, linkid, wk2open, rushhour, lnspd_res, CI),
+    by = c("case", "linkid", "wk2open")
+  ) %>%
   filter(!is.na(rushhour), link2_nearest_treat_line_km <= 2.5 | treat == 0) %>%
   mutate(
     Dp_Rush = Dp * as.numeric(rushhour == 1),
