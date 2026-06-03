@@ -2079,12 +2079,4 @@ p_fig7 <- ggplot() +
 p_fig7
 ```
 
-```{r fig7_save, include=FALSE}
-ggsave(
-  filename = "FertigeGrafiken/Fig7_R.png",
-  plot = p_fig7,
-  width = 7.2,
-  height = 5.7,
-  dpi = 300
-)
-```
+
