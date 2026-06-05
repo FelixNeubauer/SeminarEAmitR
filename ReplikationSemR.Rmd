@@ -1085,7 +1085,7 @@ fig2_c_df <- extract_event_path(mod_fig2_c)
 
 plot_fig2_panel <- function(df, panel_title) {
   ggplot(df, aes(x = week, y = estimate)) +
-    geom_errorbar(aes(ymin = ci_low, ymax = ci_high), width = 0, color = "#6d8d84", linewidth = 0.5) +
+    geom_errorbar(aes(ymin = ci_low, ymax = ci_high), width = 0.5, color = "#6d8d84", linewidth = 0.5) +
     geom_point(color = "#6d8d84", size = 1.7) +
     geom_vline(xintercept = 0, color = "#a63d40", linewidth = 0.6) +
     scale_x_continuous(breaks = seq(-8, 48, 4), limits = c(-8, 48)) +
@@ -1543,7 +1543,7 @@ fig4_df <- tibble(
 # Darstellung analog zu Figure 4 (Longer Pre-Treatment Periods)
 p_fig4 <- ggplot(fig4_df, aes(x = wk2open, y = coef)) +
   geom_hline(yintercept = c(-0.05, 0, 0.05, 0.10), color = "#B0B4B8", linewidth = 0.6) +
-  geom_errorbar(aes(ymin = lo, ymax = hi), width = 0, color = "#6d8d84", linewidth = 0.7) +
+  geom_errorbar(aes(ymin = lo, ymax = hi), width = 0.6, color = "#6d8d84", linewidth = 0.7) +
   geom_point(shape = 16, size = 2.3, color = "#6d8d84") +
   geom_vline(xintercept = 0, color = "#90343a", linewidth = 0.8) +
   scale_x_continuous(breaks = seq(-48, 48, by = 4), limits = c(-48, 48)) +
@@ -1642,7 +1642,7 @@ plot_fig5_panel <- function(df, panel_title, x_breaks, x_limits, y_breaks) {
   y_lims <- range(c(df$ci_low, df$ci_high), na.rm = TRUE) + c(-y_pad, y_pad)
 
   ggplot(df, aes(x = week, y = estimate)) +
-    geom_errorbar(aes(ymin = ci_low, ymax = ci_high), width = 0, color = "#6d8d84", linewidth = 0.55) +
+    geom_errorbar(aes(ymin = ci_low, ymax = ci_high), width = 0.5, color = "#6d8d84", linewidth = 0.55) +
     geom_point(color = "#6d8d84", size = 1.8) +
     geom_vline(xintercept = 0, color = "#c23b55", linewidth = 0.7) +
     scale_x_continuous(breaks = x_breaks, limits = x_limits) +
