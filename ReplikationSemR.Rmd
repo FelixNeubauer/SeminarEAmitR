@@ -2068,18 +2068,39 @@ p_fig7 <- ggplot() +
   geom_segment(aes(x = 1, xend = 1, y = fig7_y_floor, yend = fig7_y_axis), color = "#6b6f72", linewidth = 0.9, linetype = "42") +
   geom_segment(aes(x = 0, xend = 1, y = fig7_y_floor, yend = fig7_y_floor), color = "#6b6f72", linewidth = 0.9, linetype = "42") +
   geom_segment(aes(x = 0.08, xend = 0.30, y = 0.075, yend = 0.075), arrow = arrow(length = unit(0.13, "cm"), type = "closed"), linewidth = 0.45, color = "black") +
-  geom_segment(aes(x = 0.90, xend = 0.70, y = 0.075, yend = 0.075), arrow = arrow(length = unit(0.13, "cm"), type = "closed"), linewidth = 0.45, color = "black") +
-  geom_segment(aes(x = 0.94, xend = 0.92, y = 0.95, yend = fig7_y_shifted_road(0.92)), color = "#6b6f72", linewidth = 0.8, linetype = "42") +
-  geom_segment(aes(x = 0.78, xend = 0.90, y = 0.88, yend = fig7_y_shifted_road(0.90)), color = "#6b6f72", linewidth = 0.8, linetype = "42") +
+  geom_segment(aes(x = 0.96, xend = 0.74, y = 0.075, yend = 0.075), arrow = arrow(length = unit(0.13, "cm"), type = "closed"), linewidth = 0.45, color = "black") +
+  geom_segment(
+  aes(
+    x = 0.88,
+    xend = 0.86,
+    y = fig7_y_road(0.86) - 0.07,
+    yend = fig7_y_road(0.86)
+  ),
+  color = "#6b6f72",
+  linewidth = 0.8,
+  linetype = "42"
+  ) +
+  geom_segment(
+    aes(
+      x = 0.78,
+      xend = 0.90,
+      y = 0.88,
+      yend = fig7_y_shifted_road(0.90)
+    ),
+  color = "#6b6f72",
+  linewidth = 0.8,
+  linetype = "42"
+  ) +
   annotate("text", x = 0.60, y = 0.64, label = "A", family = "serif", fontface = "italic", size = 4.5) +
   annotate("text", x = 0.19, y = 0.47, label = "B", family = "serif", fontface = "italic", size = 4.5) +
-  annotate("text", x = 0.085, y = 0.70, label = "u[s] + xi[is]", parse = TRUE, family = "serif", size = 3.4) +
-  annotate("text", x = 0.88, y = 0.97, label = "u[a] + xi[ia]", parse = TRUE, family = "serif", size = 3.6) +
-  annotate("text", x = 0.75, y = 0.90, label = "u[a] + Delta*u[a] + xi[ia]", parse = TRUE, family = "serif", size = 3.4) +
-  annotate("text", x = 0.19, y = 0.035, label = "N[s]", parse = TRUE, family = "serif", size = 3.6) +
-  annotate("text", x = 0.86, y = 0.035, label = "N[a]", parse = TRUE, family = "serif", size = 3.6) +
-  annotate("text", x = 0.19, y = 0.070, label = "ξ_is ↑ relative to ξ_ia", family = "serif", size = 3.25) +
-  annotate("text", x = 0.86, y = 0.070, label = "ξ_ia ↑ relative to ξ_is", family = "serif", size = 3.25) +
+  annotate("text", x = 0.09, y = 0.72, label = "u[s] + xi[is]", parse = TRUE, family = "serif", size = 3.4) +
+  annotate("text", x = 0.89, y = 0.68, label = "u[a] + xi[ia]", parse = TRUE, family = "serif", size = 3.6) +
+  annotate("text", x = 0.71, y = 0.88, label = "u[a] + Delta*u[a] + xi[ia]", parse = TRUE, family = "serif", size = 3.4)+
+  annotate("text", x = 0.19, y = -0.05, label = "N[s]", parse = TRUE, family = "serif", size = 3.6) +
+  annotate("text", x = 0.86, y = -0.05, label = "N[a]", parse = TRUE, family = "serif", size = 3.6) +
+  annotate("text",x = 0.19,y = 0.04,label = "xi[is] * ' ↑ relative to ' * xi[ia]",parse = TRUE,family = "serif",size = 3.25) +
+  annotate("text",x = 0.86,y = 0.04,label = "xi[ia] * ' ↑ relative to ' * xi[is]",parse = TRUE,family = "serif",size = 3.25) +
+  
   labs(
     x = NULL,
     y = NULL,
