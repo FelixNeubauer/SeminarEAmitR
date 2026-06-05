@@ -1697,19 +1697,35 @@ p_fig5_c <- plot_fig5_panel(
 Für Figure 6 werden entsprechend der Stata-Replikationsdatei `ReplicaCodes/Fig6.do` drei Datensätze benötigt: `Data/ExtendSample.dta` als Hauptdatensatz sowie `Data/WithAgainstTraffic.dta` und `Data/RushNonrusHours.dta` für die beiden Heterogenitätsgruppen nach Fahrtrichtung und Tageszeit.
 
 ```{r fig6_data_and_estimation, echo=FALSE}
+fig6_stata_eq <- function(x, value) {
+  as.numeric(!is.na(x) & x == value)
+}
+
+fig6_stata_in <- function(x, values) {
+  as.numeric(!is.na(x) & x %in% values)
+}
+
+fig6_stata_inrange <- function(x, lower, upper) {
+  as.numeric(!is.na(x) & x >= lower & x <= upper)
+}
+
+fig6_stata_inrange_to_missing <- function(x, lower) {
+  as.numeric(is.na(x) | x >= lower)
+}
+
 fig6_base <- read_dta("Data/ExtendSample.dta") %>%
   mutate(
-    Dp_Roadtype12 = Dp * as.numeric(roadtype %in% c(1, 2)),
-    Dp_Roadtype3 = Dp * as.numeric(roadtype == 3),
-    Dp_Roadtype4 = Dp * as.numeric(roadtype == 4),
-    Dp_dist2line_0to1 = Dp * as.numeric(between(link2_nearest_treat_line_km, 0, 1)),
-    Dp_dist2line_1to2p5 = Dp * as.numeric(between(link2_nearest_treat_line_km, 1, 2.5)),
+    Dp_Roadtype12 = Dp * fig6_stata_in(roadtype, c(1, 2)),
+    Dp_Roadtype3 = Dp * fig6_stata_eq(roadtype, 3),
+    Dp_Roadtype4 = Dp * fig6_stata_eq(roadtype, 4),
+    Dp_dist2line_0to1 = Dp * fig6_stata_inrange(link2_nearest_treat_line_km, 0, 1),
+    Dp_dist2line_1to2p5 = Dp * fig6_stata_inrange(link2_nearest_treat_line_km, 1, 2.5),
     Dp_same_direct = Dp * same_direct,
-    Dp_diff_direct = Dp * as.numeric(same_direct == 0),
+    Dp_diff_direct = Dp * fig6_stata_eq(same_direct, 0),
     Dp_MostAffectedLinks = Dp * MostAffectedLinks,
-    Dp_NonMostAffectedLinks = Dp * as.numeric(MostAffectedLinks == 0),
-    Dp_MoreCongested = Dp * as.numeric(MoreCongested == 1),
-    Dp_LessCongested = Dp * as.numeric(MoreCongested == 0),
+    Dp_NonMostAffectedLinks = Dp * fig6_stata_eq(MostAffectedLinks, 0),
+    Dp_MoreCongested = Dp * fig6_stata_eq(MoreCongested, 1),
+    Dp_LessCongested = Dp * fig6_stata_eq(MoreCongested, 0),
     row_id_fig6 = row_number()
   )
 
@@ -1757,7 +1773,7 @@ mod_fig6_all <- feols(
 
 fig6_direct <- fig6_base_filter %>%
   mutate(
-    hetero = if_else(MostAffectedLinks == 1, 1, 2),
+    hetero = if_else(MostAffectedLinks == 1, 1, 2, missing = 2),
     case_wk2open_hetero = interaction(case, wk2open, hetero, drop = TRUE)
   )
 mod_fig6_direct <- feols(
@@ -1841,8 +1857,8 @@ fig6_with_traffic <- fig6_base %>%
   ) %>%
   filter(!is.na(WithTraffic), link2_nearest_treat_line_km <= 2.5 | treat == 0) %>%
   mutate(
-    Dp_WithTraffic = Dp * as.numeric(WithTraffic == 1),
-    Dp_AgainstTraffic = Dp * as.numeric(WithTraffic == 0),
+    Dp_WithTraffic = Dp * fig6_stata_eq(WithTraffic, 1),
+    Dp_AgainstTraffic = Dp * fig6_stata_eq(WithTraffic, 0),
     hetero = if_else(WithTraffic == 0, 1, 2),
     case_wk2open_hetero = interaction(case, wk2open, hetero, drop = TRUE)
   )
@@ -1862,8 +1878,8 @@ fig6_rush <- fig6_base %>%
   ) %>%
   filter(!is.na(rushhour), link2_nearest_treat_line_km <= 2.5 | treat == 0) %>%
   mutate(
-    Dp_Rush = Dp * as.numeric(rushhour == 1),
-    Dp_NoRush = Dp * as.numeric(rushhour == 0),
+    Dp_Rush = Dp * fig6_stata_eq(rushhour, 1),
+    Dp_NoRush = Dp * fig6_stata_eq(rushhour, 0),
     hetero = if_else(rushhour == 0, 1, 2),
     case_wk2open_hetero = interaction(case, wk2open, hetero, drop = TRUE),
     link_rushhour = interaction(linkid, rushhour, drop = TRUE)
@@ -1878,10 +1894,10 @@ mod_fig6_rush <- feols(
 fig6_line_distance <- fig6_base %>%
   filter(link2_nearest_line_km <= 2.5 | treat == 0) %>%
   mutate(
-    Dp_DistCat1 = Dp * as.numeric(between(link2_nearest_treat_line_km, 0, 1)),
-    Dp_DistCat2 = Dp * as.numeric(between(link2_nearest_treat_line_km, 1, 2.5)),
-    Dp_DistCat3 = Dp * as.numeric(link2_nearest_treat_line_km >= 2.5 & between(link2_nearest_line_km, 0, 1)),
-    Dp_DistCat4 = Dp * as.numeric(link2_nearest_treat_line_km >= 2.5 & between(link2_nearest_line_km, 1, 2.5))
+    Dp_DistCat1 = Dp * fig6_stata_inrange(link2_nearest_treat_line_km, 0, 1),
+    Dp_DistCat2 = Dp * fig6_stata_inrange(link2_nearest_treat_line_km, 1, 2.5),
+    Dp_DistCat3 = Dp * fig6_stata_inrange_to_missing(link2_nearest_treat_line_km, 2.5) * fig6_stata_inrange(link2_nearest_line_km, 0, 1),
+    Dp_DistCat4 = Dp * fig6_stata_inrange_to_missing(link2_nearest_treat_line_km, 2.5) * fig6_stata_inrange(link2_nearest_line_km, 1, 2.5)
   )
 mod_fig6_line_distance <- feols(
   lnspd_res ~ Dp_DistCat1 + Dp_DistCat2 + Dp_DistCat3 + Dp_DistCat4 + treat |
