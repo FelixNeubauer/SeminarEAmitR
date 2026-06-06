@@ -383,12 +383,12 @@ data_grafik1_monat <- read_dta("Data/data_table1.dta") %>%
   ) %>%
   filter(!is.na(x_plot), !is.na(line_status))
 
-# Punkte mit identischem Monat und Jahr werden innerhalb des Panels
-# horizontal nebeneinander angeordnet. So bleiben Mehrfacheröffnungen
-# sichtbar, ohne dass sie sich überdecken.
+# Punkte mit identischem Monat und Jahr werden horizontal nebeneinander
+# angeordnet. So bleiben Mehrfacheröffnungen panelübergreifend sichtbar,
+# ohne dass sie sich überdecken.
 data_grafik1_monat_cluster <- data_grafik1_monat %>%
-  group_by(panel, opening_year, x_plot) %>%
-  arrange(line_status, opening_date, .by_group = TRUE) %>%
+  group_by(opening_year, x_plot) %>%
+  arrange(panel, line_status, opening_date, .by_group = TRUE) %>%
   mutate(
     n_cluster = n(),
     cluster_id = row_number(),
@@ -397,7 +397,8 @@ data_grafik1_monat_cluster <- data_grafik1_monat %>%
       0,
       seq(-0.32, 0.32, length.out = n())
     ),
-    x_cluster = x_plot + x_offset
+    x_cluster = x_plot + x_offset,
+    y_plot = -opening_year
   ) %>%
   ungroup()
 
@@ -407,6 +408,9 @@ year_breaks_grafik1 <- seq(
   by = 1
 )
 
+year_breaks_grafik1_plot <- -rev(year_breaks_grafik1)
+year_breaks_grafik1_labels <- rev(year_breaks_grafik1)
+
 
 ```
 
@@ -414,7 +418,7 @@ year_breaks_grafik1 <- seq(
 ```{r grafik1, fig.width=12, fig.height=9.5, out.width="73%", dpi=50, dev="png", fig.align="left"}
 plot_data_grafik1_monat <- ggplot(
   data_grafik1_monat_cluster,
-  aes(x = x_cluster, y = opening_year, fill = panel, shape = line_status)
+  aes(x = x_cluster, y = y_plot, fill = panel, shape = line_status)
 ) +
   geom_point(
     size = 5.3,
@@ -459,22 +463,17 @@ plot_data_grafik1_monat <- ggplot(
     expand = c(0.02, 0)
   ) +
   scale_y_continuous(
-    breaks = year_breaks_grafik1,
+    breaks = year_breaks_grafik1_plot,
+    labels = year_breaks_grafik1_labels,
     minor_breaks = NULL,
     expand = expansion(mult = c(0.03, 0.05))
-  ) +
-  facet_grid(
-    rows = vars(panel),
-    scales = "free_y",
-    space = "free_y",
-    switch = "y"
   ) +
   coord_cartesian(
     clip = "off"
   ) +
   labs(
     title = "Opening dates of subway lines in the sample",
-    subtitle = "Exact opening dates by month and year; multiple openings in the same month-year are clustered side by side",
+    subtitle = "Exact opening dates by month and year; earliest years are shown at the top",
     x = NULL,
     y = "Opening year"
   ) +
@@ -506,14 +505,6 @@ theme(
   axis.text.y = element_text(size = 12),
   axis.ticks.y = element_line(color = "grey45", linewidth = 0.3),
   axis.title.y = element_text(size = 17, face = "bold", margin = margin(r = 12)),
-  strip.placement = "outside",
-  strip.text.y.left = element_text(
-    size = 16,
-    face = "bold",
-    angle = 0,
-    margin = margin(r = 12)
-  ),
-  panel.spacing.y = unit(1.1, "lines"),
 
   plot.title = element_text(
     hjust = 0.5,
