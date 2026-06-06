@@ -404,10 +404,13 @@ data_grafik1_monat_cluster <- data_grafik1_monat %>%
   mutate(
     n_cluster = n(),
     cluster_id = row_number(),
-    cluster_span = if_else(
-      !is.na(first(opening_month)) & first(opening_month) == 12L,
-      0.55,
-      0.32
+    cluster_span = case_when(
+      is.na(first(opening_month)) ~ 0.32,
+      n_cluster == 2L ~ 0.15,
+      n_cluster == 3L ~ 0.20,
+      n_cluster == 4L ~ 0.35,
+      n_cluster > 4L ~ 0.75,
+      TRUE ~ 0
     ),
     x_offset = if (n() == 1L) {
       0
