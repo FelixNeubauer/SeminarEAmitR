@@ -358,11 +358,12 @@ data_grafik1_monat <- read_dta("Data/data_table1.dta") %>%
       NA_integer_
     ),
     
-    # reine Jahresangaben als eigener Stapel rechts neben Dezember
-    x_plot = if_else(
-      date_precision == "year",
-      14L,
-      opening_month
+    # Dezember bekommt etwas mehr Abstand zu November und zu den
+    # reinen Jahresangaben rechts daneben.
+    x_plot = case_when(
+      date_precision == "year" ~ 14.6,
+      opening_month == 12L ~ 12.4,
+      TRUE ~ as.numeric(opening_month)
     ),
     
     line_status = case_when(
@@ -384,16 +385,12 @@ data_grafik1_monat <- read_dta("Data/data_table1.dta") %>%
   filter(!is.na(x_plot), !is.na(line_status))
 
 # Die y-Achse wird komprimiert: Der Ausreißer 1684 bleibt sichtbar,
-# aber die leeren Jahre bis 2004 nehmen nur wenig Platz ein. Um 2016
-# wird zusätzlich Abstand eingefügt, damit die dortigen Punkte lesbarer sind.
+# aber die leeren Jahre bis 2004 nehmen nur wenig Platz ein. Danach
+# werden alle Jahre einheitlich auf der y-Achse verteilt.
 map_year_grafik1 <- function(year) {
   case_when(
     year < 2004 ~ 0,
-    TRUE ~ -(
-      year - 2004 + 2 +
-        if_else(year >= 2016, 1.3, 0) +
-        if_else(year >= 2017, 1.3, 0)
-    )
+    TRUE ~ -(year - 2004 + 2)
   )
 }
 
@@ -423,6 +420,8 @@ year_breaks_grafik1 <- c(
 
 year_breaks_grafik1_plot <- map_year_grafik1(rev(year_breaks_grafik1))
 year_breaks_grafik1_labels <- rev(year_breaks_grafik1)
+
+month_breaks_grafik1 <- c(1:11, 12.4, 14.6)
 
 
 ```
@@ -466,8 +465,8 @@ plot_data_grafik1_monat <- ggplot(
     )
   ) +
   scale_x_continuous(
-    limits = c(0.5, 14.5),
-    breaks = c(1:12, 14),
+    limits = c(0.5, 15.1),
+    breaks = month_breaks_grafik1,
     labels = c(
       "Jan", "Feb", "Mär", "Apr", "Mai", "Jun",
       "Jul", "Aug", "Sep", "Okt", "Nov", "Dez",
@@ -513,7 +512,7 @@ plot_data_grafik1_monat <- ggplot(
 theme_minimal(base_size = 15) +
 theme(
   panel.grid.minor = element_blank(),
-  panel.grid.major.x = element_blank(),
+  panel.grid.major.x = element_line(color = "grey88", linewidth = 0.35),
   panel.grid.major.y = element_line(color = "grey88", linewidth = 0.35),
   axis.text.y = element_text(size = 12),
   axis.ticks.y = element_line(color = "grey45", linewidth = 0.3),
