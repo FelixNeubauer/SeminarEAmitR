@@ -358,11 +358,12 @@ data_grafik1_monat <- read_dta("Data/data_table1.dta") %>%
       NA_integer_
     ),
     
-    # Dezember bekommt etwas mehr Abstand zu November und zu den
-    # reinen Jahresangaben rechts daneben.
+    # Dezember bekommt deutlich mehr Abstand zu November und zu den
+    # reinen Jahresangaben rechts daneben. So bleibt genug Platz für
+    # breiter geclusterte Dezember-Punkte.
     x_plot = case_when(
-      date_precision == "year" ~ 14.6,
-      opening_month == 12L ~ 12.4,
+      date_precision == "year" ~ 15.4,
+      opening_month == 12L ~ 13.0,
       TRUE ~ as.numeric(opening_month)
     ),
     
@@ -403,11 +404,16 @@ data_grafik1_monat_cluster <- data_grafik1_monat %>%
   mutate(
     n_cluster = n(),
     cluster_id = row_number(),
-    x_offset = if_else(
-      n_cluster == 1L,
-      0,
-      seq(-0.32, 0.32, length.out = n())
+    cluster_span = if_else(
+      !is.na(first(opening_month)) & first(opening_month) == 12L,
+      0.55,
+      0.32
     ),
+    x_offset = if (n() == 1L) {
+      0
+    } else {
+      seq(-first(cluster_span), first(cluster_span), length.out = n())
+    },
     x_cluster = x_plot + x_offset,
     y_plot = map_year_grafik1(opening_year)
   ) %>%
@@ -421,7 +427,7 @@ year_breaks_grafik1 <- c(
 year_breaks_grafik1_plot <- map_year_grafik1(rev(year_breaks_grafik1))
 year_breaks_grafik1_labels <- rev(year_breaks_grafik1)
 
-month_breaks_grafik1 <- c(1:11, 12.4, 14.6)
+month_breaks_grafik1 <- c(1:11, 13.0, 15.4)
 
 
 ```
@@ -465,7 +471,7 @@ plot_data_grafik1_monat <- ggplot(
     )
   ) +
   scale_x_continuous(
-    limits = c(0.5, 15.1),
+    limits = c(0.5, 16.0),
     breaks = month_breaks_grafik1,
     labels = c(
       "Jan", "Feb", "Mär", "Apr", "Mai", "Jun",
