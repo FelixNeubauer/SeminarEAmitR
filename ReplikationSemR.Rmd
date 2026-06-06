@@ -358,11 +358,13 @@ data_grafik1_monat <- read_dta("Data/data_table1.dta") %>%
       NA_integer_
     ),
     
-    # reine Jahresangaben als eigener Stapel rechts neben Dezember
-    x_plot = if_else(
-      date_precision == "year",
-      14L,
-      opening_month
+    # Dezember bekommt deutlich mehr Abstand zu November und zu den
+    # reinen Jahresangaben rechts daneben. So bleibt genug Platz für
+    # breiter geclusterte Dezember-Punkte.
+    x_plot = case_when(
+      date_precision == "year" ~ 15.4,
+      opening_month == 12L ~ 13.0,
+      TRUE ~ as.numeric(opening_month)
     ),
     
     line_status = case_when(
@@ -383,31 +385,64 @@ data_grafik1_monat <- read_dta("Data/data_table1.dta") %>%
   ) %>%
   filter(!is.na(x_plot), !is.na(line_status))
 
-# Manueller Stapel:
-# unten Panel A, darüber Panel B, darüber Panel C
-data_grafik1_monat_stack <- data_grafik1_monat %>%
-  count(x_plot, panel, line_status, name = "n") %>%
-  filter(n > 0) %>%
-  group_by(x_plot) %>%
-  arrange(panel, line_status, .by_group = TRUE) %>%
-  mutate(y_start = lag(cumsum(n), default = 0)) %>%
-  uncount(n, .id = "dot_id") %>%
-  mutate(y = y_start + dot_id) %>%
+# Die y-Achse wird komprimiert: Der Ausreißer 1684 bleibt sichtbar,
+# aber die leeren Jahre bis 2004 nehmen nur wenig Platz ein. Danach
+# werden alle Jahre einheitlich auf der y-Achse verteilt.
+map_year_grafik1 <- function(year) {
+  case_when(
+    year < 2004 ~ 0,
+    TRUE ~ -(year - 2004 + 2)
+  )
+}
+
+# Punkte mit identischem Monat und Jahr werden horizontal nebeneinander
+# angeordnet. So bleiben Mehrfacheröffnungen panelübergreifend sichtbar,
+# ohne dass sie sich überdecken.
+data_grafik1_monat_cluster <- data_grafik1_monat %>%
+  group_by(opening_year, x_plot) %>%
+  arrange(panel, line_status, opening_date, .by_group = TRUE) %>%
+  mutate(
+    n_cluster = n(),
+    cluster_id = row_number(),
+    cluster_span = case_when(
+      is.na(first(opening_month)) ~ 0.32,
+      n_cluster == 2L ~ 0.15,
+      n_cluster == 3L ~ 0.25,
+      n_cluster == 4L ~ 0.35,
+      n_cluster > 4L ~ 0.75,
+      TRUE ~ 0
+    ),
+    x_offset = if (n() == 1L) {
+      0
+    } else {
+      seq(-first(cluster_span), first(cluster_span), length.out = n())
+    },
+    x_cluster = x_plot + x_offset,
+    y_plot = map_year_grafik1(opening_year)
+  ) %>%
   ungroup()
 
-max_y <- max(data_grafik1_monat_stack$y, na.rm = TRUE)
+year_breaks_grafik1 <- c(
+  min(data_grafik1_monat_cluster$opening_year, na.rm = TRUE),
+  seq(2004, max(data_grafik1_monat_cluster$opening_year, na.rm = TRUE), by = 1)
+)
+
+year_breaks_grafik1_plot <- map_year_grafik1(rev(year_breaks_grafik1))
+year_breaks_grafik1_labels <- rev(year_breaks_grafik1)
+
+month_breaks_grafik1 <- c(1:11, 13.0, 15.4)
 
 
 ```
 
 
-```{r grafik1, fig.width=12, fig.height=9.5, out.width="73%", dpi=50, dev="png", fig.align="left"}
+```{r grafik1, fig.width=12, fig.height=9.5, out.width="73%", dpi=300, dev="png", fig.align="left"}
 plot_data_grafik1_monat <- ggplot(
-  data_grafik1_monat_stack,
-  aes(x = x_plot, y = y, fill = panel, shape = line_status)
+  data_grafik1_monat_cluster,
+  aes(x = x_cluster, y = y_plot, fill = panel, shape = line_status)
 ) +
   geom_point(
-    size = 6.1,
+    size = 5.3,
     color = "white",
     stroke = 0.35,
     alpha = 0.95
@@ -439,8 +474,8 @@ plot_data_grafik1_monat <- ggplot(
     )
   ) +
   scale_x_continuous(
-    limits = c(0.5, 14.5),
-    breaks = c(1:12, 14),
+    limits = c(0.5, 16.0),
+    breaks = month_breaks_grafik1,
     labels = c(
       "Jan", "Feb", "Mär", "Apr", "Mai", "Jun",
       "Jul", "Aug", "Sep", "Okt", "Nov", "Dez",
@@ -448,16 +483,20 @@ plot_data_grafik1_monat <- ggplot(
     ),
     expand = c(0.02, 0)
   ) +
+  scale_y_continuous(
+    breaks = year_breaks_grafik1_plot,
+    labels = year_breaks_grafik1_labels,
+    minor_breaks = NULL,
+    expand = expansion(mult = c(0.03, 0.05))
+  ) +
   coord_cartesian(
-    ylim = c(0.5, max_y + 1.8),
-    expand = FALSE,
     clip = "off"
   ) +
   labs(
     title = "Opening dates of subway lines in the sample",
-    subtitle = "Exact opening dates aggregated by month; year-only entries shown separately",
+    subtitle = "Zur Übersichtlichkeit wurde der Bereich zwischen 1984 und 2004 ausgeblendet",
     x = NULL,
-    y = NULL
+    y = "Opening year"
   ) +
   guides(
   fill = guide_legend(
@@ -482,9 +521,11 @@ plot_data_grafik1_monat <- ggplot(
 theme_minimal(base_size = 15) +
 theme(
   panel.grid.minor = element_blank(),
-  panel.grid.major.y = element_blank(),
-  axis.text.y = element_blank(),
-  axis.ticks.y = element_blank(),
+  panel.grid.major.x = element_line(color = "grey88", linewidth = 0.35),
+  panel.grid.major.y = element_line(color = "grey88", linewidth = 0.35),
+  axis.text.y = element_text(size = 12),
+  axis.ticks.y = element_line(color = "grey45", linewidth = 0.3),
+  axis.title.y = element_text(size = 17, face = "bold", margin = margin(r = 12)),
 
   plot.title = element_text(
     hjust = 0.5,
