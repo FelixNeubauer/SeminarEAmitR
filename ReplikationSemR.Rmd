@@ -383,19 +383,29 @@ data_grafik1_monat <- read_dta("Data/data_table1.dta") %>%
   ) %>%
   filter(!is.na(x_plot), !is.na(line_status))
 
-# Manueller Stapel:
-# unten Panel A, darüber Panel B, darüber Panel C
-data_grafik1_monat_stack <- data_grafik1_monat %>%
-  count(x_plot, panel, line_status, name = "n") %>%
-  filter(n > 0) %>%
-  group_by(x_plot) %>%
-  arrange(panel, line_status, .by_group = TRUE) %>%
-  mutate(y_start = lag(cumsum(n), default = 0)) %>%
-  uncount(n, .id = "dot_id") %>%
-  mutate(y = y_start + dot_id) %>%
+# Punkte mit identischem Monat und Jahr werden innerhalb des Panels
+# horizontal nebeneinander angeordnet. So bleiben Mehrfacheröffnungen
+# sichtbar, ohne dass sie sich überdecken.
+data_grafik1_monat_cluster <- data_grafik1_monat %>%
+  group_by(panel, opening_year, x_plot) %>%
+  arrange(line_status, opening_date, .by_group = TRUE) %>%
+  mutate(
+    n_cluster = n(),
+    cluster_id = row_number(),
+    x_offset = if_else(
+      n_cluster == 1L,
+      0,
+      seq(-0.32, 0.32, length.out = n())
+    ),
+    x_cluster = x_plot + x_offset
+  ) %>%
   ungroup()
 
-max_y <- max(data_grafik1_monat_stack$y, na.rm = TRUE)
+year_breaks_grafik1 <- seq(
+  min(data_grafik1_monat_cluster$opening_year, na.rm = TRUE),
+  max(data_grafik1_monat_cluster$opening_year, na.rm = TRUE),
+  by = 1
+)
 
 
 ```
@@ -403,11 +413,11 @@ max_y <- max(data_grafik1_monat_stack$y, na.rm = TRUE)
 
 ```{r grafik1, fig.width=12, fig.height=9.5, out.width="73%", dpi=50, dev="png", fig.align="left"}
 plot_data_grafik1_monat <- ggplot(
-  data_grafik1_monat_stack,
-  aes(x = x_plot, y = y, fill = panel, shape = line_status)
+  data_grafik1_monat_cluster,
+  aes(x = x_cluster, y = opening_year, fill = panel, shape = line_status)
 ) +
   geom_point(
-    size = 6.1,
+    size = 5.3,
     color = "white",
     stroke = 0.35,
     alpha = 0.95
@@ -448,16 +458,25 @@ plot_data_grafik1_monat <- ggplot(
     ),
     expand = c(0.02, 0)
   ) +
+  scale_y_continuous(
+    breaks = year_breaks_grafik1,
+    minor_breaks = NULL,
+    expand = expansion(mult = c(0.03, 0.05))
+  ) +
+  facet_grid(
+    rows = vars(panel),
+    scales = "free_y",
+    space = "free_y",
+    switch = "y"
+  ) +
   coord_cartesian(
-    ylim = c(0.5, max_y + 1.8),
-    expand = FALSE,
     clip = "off"
   ) +
   labs(
     title = "Opening dates of subway lines in the sample",
-    subtitle = "Exact opening dates aggregated by month; year-only entries shown separately",
+    subtitle = "Exact opening dates by month and year; multiple openings in the same month-year are clustered side by side",
     x = NULL,
-    y = NULL
+    y = "Opening year"
   ) +
   guides(
   fill = guide_legend(
@@ -482,9 +501,19 @@ plot_data_grafik1_monat <- ggplot(
 theme_minimal(base_size = 15) +
 theme(
   panel.grid.minor = element_blank(),
-  panel.grid.major.y = element_blank(),
-  axis.text.y = element_blank(),
-  axis.ticks.y = element_blank(),
+  panel.grid.major.x = element_blank(),
+  panel.grid.major.y = element_line(color = "grey88", linewidth = 0.35),
+  axis.text.y = element_text(size = 12),
+  axis.ticks.y = element_line(color = "grey45", linewidth = 0.3),
+  axis.title.y = element_text(size = 17, face = "bold", margin = margin(r = 12)),
+  strip.placement = "outside",
+  strip.text.y.left = element_text(
+    size = 16,
+    face = "bold",
+    angle = 0,
+    margin = margin(r = 12)
+  ),
+  panel.spacing.y = unit(1.1, "lines"),
 
   plot.title = element_text(
     hjust = 0.5,
