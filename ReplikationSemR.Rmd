@@ -407,7 +407,7 @@ data_grafik1_monat_cluster <- data_grafik1_monat %>%
     cluster_span = case_when(
       is.na(first(opening_month)) ~ 0.32,
       n_cluster == 2L ~ 0.15,
-      n_cluster == 3L ~ 0.20,
+      n_cluster == 3L ~ 0.25,
       n_cluster == 4L ~ 0.35,
       n_cluster > 4L ~ 0.75,
       TRUE ~ 0
@@ -436,7 +436,7 @@ month_breaks_grafik1 <- c(1:11, 13.0, 15.4)
 ```
 
 
-```{r grafik1, fig.width=12, fig.height=9.5, out.width="73%", dpi=50, dev="png", fig.align="left"}
+```{r grafik1, fig.width=12, fig.height=9.5, out.width="73%", dpi=300, dev="png", fig.align="left"}
 plot_data_grafik1_monat <- ggplot(
   data_grafik1_monat_cluster,
   aes(x = x_cluster, y = y_plot, fill = panel, shape = line_status)
@@ -494,7 +494,7 @@ plot_data_grafik1_monat <- ggplot(
   ) +
   labs(
     title = "Opening dates of subway lines in the sample",
-    subtitle = "Exact opening dates by month and year; the 1684 outlier is shown with a compressed gap to 2004",
+    subtitle = "Zur Übersichtlichkeit wurde der Bereich zwischen 1984 und 2004 ausgeblendet",
     x = NULL,
     y = "Opening year"
   ) +
