@@ -329,11 +329,127 @@ p_fig1 <- ggplot(plot_df, aes(x = year)) +
 p_fig1
 ```
 
+```{r plotfig1 präsi, echo=FALSE, dpi=300}
+# ggplot benötigt einen skalierungsfaktor für die rechte achse
+scale_factor <- 3.2
+
+
+# Plot erstellen
+
+p_fig1_figma <- ggplot(plot_df, aes(x = year)) +
+  geom_line(
+    # Graph Ridership
+    data = plot_df %>% filter(year >= 2002, !is.na(subway_ridership)),
+    aes(y = subway_ridership, color = "ridership"),
+    linewidth = 1.1,
+    lineend = "round"
+  ) +
+  geom_line(
+    # Graph Length
+    data = plot_df %>% filter(year >= 2002, !is.na(subway_length2)),
+    aes(y = subway_length2 * scale_factor, color = "length"),
+    linewidth = 1.1,
+    linetype = "31"
+  ) +
+  # Achsen und Skalen konfigurieren und Skalenstriche hinzufügen
+  scale_x_continuous(
+    breaks = c(2000, 2005, 2010, 2015, 2020),
+    limits = c(2000, 2020)
+  ) +
+  scale_y_continuous(
+    name = "total ridership (million)",
+    breaks = c(0, 5000, 10000, 15000),
+    limits = c(0, 16000),
+    sec.axis = sec_axis(
+      ~ . / scale_factor,
+      name = "total length (km)",
+      breaks = c(0, 1000, 2000, 3000, 4000, 5000)
+    )
+  ) +
+  # Farben mit Hexpicker aus Original übernommen
+  scale_color_manual(
+    values = c("ridership" = "#8BAFAC", "length" = "#171738"),
+    breaks = c("ridership", "length")
+  ) +
+  # X-Achse beschriftung
+  labs(
+    x = "year",
+    color = NULL
+  ) +
+  # Labels aus Original für Anzahl der Städte 2002 und 2017
+  geom_text(
+    data = tibble(
+      x = c(2000.2, 2017.5),
+      y = c(236 * scale_factor + 100, 4476 * scale_factor + 100),
+      label = c("4 cities", "30 cities")
+    ),
+    aes(x = x, y = y, label = label),
+    inherit.aes = FALSE,
+    color = "black",
+    size = 2.8,
+    hjust = 0,
+    vjust = c(-0.1, -0.15)
+  ) +
+  # Legende hinzugefügt
+  guides(
+    color = guide_legend(
+      nrow = 1,
+      byrow = TRUE,
+      override.aes = list(
+        linewidth = c(1.3, 1.3),
+        linetype = c("solid", "dashed")
+      )
+    )
+  ) +
+  # Theme mit Farben, Positionen und vertikalen Skalenbeschriftungen
+  theme_classic(base_size = 12) +
+  theme(
+    legend.position = "bottom",
+    legend.direction = "horizontal",
+    legend.key.width = unit(2.4, "cm"),
+    legend.key.height = unit(0.6, "cm"),
+    legend.background = element_rect(color = "black", fill = "white", linewidth = 0.4),
+    legend.box.background = element_rect(color = "black", fill = "white", linewidth = 0.4),
+    legend.margin = margin(6, 10, 6, 10),
+  
+    panel.border = element_blank(),
+    panel.grid.major.y = element_line(color = "grey90", linewidth = 0.3),
+    panel.grid.minor = element_blank(),
+  
+    axis.line.x.bottom = element_line(color = "black"),
+    axis.line.y.left = element_line(color = "black"),
+    axis.line.y.right = element_line(color = "black"),
+    axis.line.x.top = element_blank(),
+    
+    axis.text.y = element_text(angle = 90, vjust = 0.5, hjust = 0.5),
+    axis.text.y.right = element_text(angle = 90, vjust = 0.5, hjust = 0.5),
+  
+    axis.title.y.right = element_text(
+      angle = 90,
+      margin = margin(l = 12)
+    ),
+    # Aspect Ratio vom Original übernommen
+    aspect.ratio = 1.15
+  )
+
+p_fig1_figma
+```
+
 ```{r fig1_save, include=FALSE}
 # Grafik als png speichern
 ggsave(
   filename = "FertigeGrafiken/Fig1_R.png",
   plot = p_fig1
+)
+
+
+```
+
+```{r fig1_save_figma, include=FALSE}
+# Grafik als png speichern
+ggsave(
+  filename = "FertigeGrafiken/Fig1_R_Figma.png",
+  plot = p_fig1_figma
 )
 
 
