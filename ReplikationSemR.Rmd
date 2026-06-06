@@ -383,6 +383,20 @@ data_grafik1_monat <- read_dta("Data/data_table1.dta") %>%
   ) %>%
   filter(!is.na(x_plot), !is.na(line_status))
 
+# Die y-Achse wird komprimiert: Der Ausreißer 1684 bleibt sichtbar,
+# aber die leeren Jahre bis 2004 nehmen nur wenig Platz ein. Um 2016
+# wird zusätzlich Abstand eingefügt, damit die dortigen Punkte lesbarer sind.
+map_year_grafik1 <- function(year) {
+  case_when(
+    year < 2004 ~ 0,
+    TRUE ~ -(
+      year - 2004 + 2 +
+        if_else(year >= 2016, 1.3, 0) +
+        if_else(year >= 2017, 1.3, 0)
+    )
+  )
+}
+
 # Punkte mit identischem Monat und Jahr werden horizontal nebeneinander
 # angeordnet. So bleiben Mehrfacheröffnungen panelübergreifend sichtbar,
 # ohne dass sie sich überdecken.
@@ -398,17 +412,16 @@ data_grafik1_monat_cluster <- data_grafik1_monat %>%
       seq(-0.32, 0.32, length.out = n())
     ),
     x_cluster = x_plot + x_offset,
-    y_plot = -opening_year
+    y_plot = map_year_grafik1(opening_year)
   ) %>%
   ungroup()
 
-year_breaks_grafik1 <- seq(
+year_breaks_grafik1 <- c(
   min(data_grafik1_monat_cluster$opening_year, na.rm = TRUE),
-  max(data_grafik1_monat_cluster$opening_year, na.rm = TRUE),
-  by = 1
+  seq(2004, max(data_grafik1_monat_cluster$opening_year, na.rm = TRUE), by = 1)
 )
 
-year_breaks_grafik1_plot <- -rev(year_breaks_grafik1)
+year_breaks_grafik1_plot <- map_year_grafik1(rev(year_breaks_grafik1))
 year_breaks_grafik1_labels <- rev(year_breaks_grafik1)
 
 
@@ -473,7 +486,7 @@ plot_data_grafik1_monat <- ggplot(
   ) +
   labs(
     title = "Opening dates of subway lines in the sample",
-    subtitle = "Exact opening dates by month and year; earliest years are shown at the top",
+    subtitle = "Exact opening dates by month and year; the 1684 outlier is shown with a compressed gap to 2004",
     x = NULL,
     y = "Opening year"
   ) +
