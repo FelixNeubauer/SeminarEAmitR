@@ -50,11 +50,15 @@ Die Autoren kommen zu dem Ergebnis, dass neue U-Bahn-Linien den Straßenverkehr 
 
 # Daten
 
-Die Replikation arbeitet mit mehreren bereits aufbereiteten Stata-Datensätzen. Die folgenden Übersichten werden direkt aus den eingelesenen R-Objekten erzeugt und aktualisieren sich daher automatisch, wenn sich die zugrunde liegenden `.dta`-Dateien ändern. Inhaltlich lassen sich die Dateien in stadt- und U-Bahn-bezogene Hintergrunddaten, Basissamples auf Ebene von Straßenabschnitt und Woche sowie ergänzende Samples für Heterogenitätsanalysen einteilen.
+Der folgende Abschnitt orientiert sich am Stil einer kurzen Datendokumentation: Zuerst wird erklärt, welche Rolle die einzelnen Dateien in der Replikation spielen; anschließend werden aus den tatsächlich eingelesenen `.dta`-Dateien kompakte Übersichten berechnet. Dadurch sind die Tabellen nicht händisch abgetippt, sondern werden beim Rendern des Dokuments direkt aus den Daten erzeugt.
 
-```{r daten-uebersicht, echo=FALSE}
+```{r daten-hilfsfunktionen, echo=FALSE}
 format_int <- function(x) {
   format(x, big.mark = ".", decimal.mark = ",", scientific = FALSE, trim = TRUE)
+}
+
+format_num <- function(x, digits = 2) {
+  format(round(x, digits), big.mark = ".", decimal.mark = ",", scientific = FALSE, trim = TRUE)
 }
 
 format_range <- function(x) {
@@ -83,6 +87,16 @@ range_variable <- function(data, variable) {
   format_range(data[[variable]])
 }
 
+share_percent <- function(x) {
+  format_num(mean(x, na.rm = TRUE) * 100, 1)
+}
+```
+
+## Überblick über die verwendeten Dateien
+
+Die Replikation nutzt einerseits Stadt- und U-Bahn-Daten, mit denen der langfristige Ausbau des chinesischen U-Bahn-Netzes beschrieben wird. Andererseits bilden die Straßenabschnittsdaten die Grundlage der Difference-in-Differences-Analysen: Dort wird verglichen, wie sich Geschwindigkeiten und Stau auf behandelten Straßen relativ zu Kontrollstraßen um den Eröffnungszeitpunkt neuer U-Bahn-Linien entwickeln.
+
+```{r daten-uebersicht, echo=FALSE}
 dataset_overview <- tibble::tibble(
   Datensatz = c(
     "Data/UrbanTransitReports.dta",
@@ -102,163 +116,173 @@ dataset_overview <- tibble::tibble(
     WithAgainstTraffic_input,
     RushNonrusHours_input
   ),
-  `Ebene / Beobachtungseinheit` = c(
+  `Ebene der Beobachtung` = c(
     "Stadt-Jahr",
     "U-Bahn-Linie",
     "Stadt",
-    "Straßenabschnitt-Woche relativ zur Linieneröffnung",
-    "Straßenabschnitt-Woche relativ zur Linieneröffnung",
-    "Straßenabschnitt-Woche-Rush-Hour-Richtung",
-    "Straßenabschnitt-Woche-Zeitfenster"
+    "Straßenabschnitt x Woche",
+    "Straßenabschnitt x Woche",
+    "Straßenabschnitt x Woche x Rush-Hour-Richtung",
+    "Straßenabschnitt x Woche x Zeitfenster"
   ),
-  `Aus den Daten berechnete Kennzahlen` = c(
-    paste0(
-      count_distinct(UrbanTransitReports_input, "城市"), " Städte; Jahre ",
-      range_variable(UrbanTransitReports_input, "年份")
-    ),
-    paste0(
-      count_distinct(SubwayLines_input, "linename"), " Linien; ",
-      count_distinct(SubwayLines_input, "city"), " Städte; Eröffnungsjahre ",
-      range_variable(SubwayLines_input, "openyear")
-    ),
-    paste0(
-      count_distinct(CityChars_input, "cityname"), " Städte; ",
-      format_int(sum(CityChars_input$treat == 1, na.rm = TRUE)), " treated; ",
-      format_int(sum(CityChars_input$treat == 0, na.rm = TRUE)), " control"
-    ),
-    paste0(
-      count_distinct(BaseSamp_input, "linkid"), " Straßenabschnitte; ",
-      count_distinct(BaseSamp_input, "case"), " Vergleichsfälle; Wochen ",
-      range_variable(BaseSamp_input, "wk2open")
-    ),
-    paste0(
-      count_distinct(ExtendSample_input, "linkid"), " Straßenabschnitte; ",
-      count_distinct(ExtendSample_input, "case"), " Vergleichsfälle; Wochen ",
-      range_variable(ExtendSample_input, "wk2open")
-    ),
-    paste0(
-      count_distinct(WithAgainstTraffic_input, "linkid"), " Straßenabschnitte; ",
-      count_distinct(WithAgainstTraffic_input, "case"), " Vergleichsfälle; Wochen ",
-      range_variable(WithAgainstTraffic_input, "wk2open")
-    ),
-    paste0(
-      count_distinct(RushNonrusHours_input, "linkid"), " Straßenabschnitte; ",
-      count_distinct(RushNonrusHours_input, "case"), " Vergleichsfälle; Wochen ",
-      range_variable(RushNonrusHours_input, "wk2open")
-    )
+  `Für welche Analyse?` = c(
+    "Beschreibung des U-Bahn-Ausbaus und der Fahrgastzahlen in Figure 1",
+    "Linieneröffnungen und kumulierte Netzlänge in Figure 1",
+    "Stadtmerkmale und treated/control-Vergleich in Table 2",
+    "Hauptsample für die zentralen DiD-Schätzungen",
+    "Erweitertes Sample für Distanz-, Richtungs- und Stau-Heterogenität",
+    "Heterogenität nach Fahrtrichtung während der Rush Hour",
+    "Vergleich zwischen Rush-Hour- und Non-Rush-Hour-Zeitfenstern"
   ),
-  `Rolle in der Replikation` = c(
-    "Hintergrunddaten zu öffentlichem Verkehr, Stadtentwicklung und U-Bahn-Ausbau; Grundlage für Figure 1.",
-    "Linieninformationen wie Stadt, Linienname, Länge, Stationen und Eröffnungsdatum; ergänzt Figure 1 um die kumulierte Streckenlänge.",
-    "Stadtmerkmale für deskriptive Statistiken und Kontrollvariablen.",
-    "Zentrales Basissample für die Difference-in-Differences-Hauptergebnisse.",
-    "Erweitertes Sample für räumliche Heterogenität, Entfernungen und Richtungsmaße.",
-    "Ergänzung zu Figure 6 für die Unterscheidung zwischen Fahrten mit und gegen die typische Pendelrichtung.",
-    "Ergänzung zu Figure 6 für den Vergleich zwischen Stoßzeiten und Nicht-Stoßzeiten."
+  `Aus den Daten berechnete Zusatzinfo` = c(
+    paste0(count_distinct(UrbanTransitReports_input, "城市"), " Städte; Jahre ", range_variable(UrbanTransitReports_input, "年份")),
+    paste0(count_distinct(SubwayLines_input, "city"), " Städte; Eröffnungsjahre ", range_variable(SubwayLines_input, "openyear")),
+    paste0(format_int(sum(CityChars_input$treat == 1, na.rm = TRUE)), " treated cities; ", format_int(sum(CityChars_input$treat == 0, na.rm = TRUE)), " control cities"),
+    paste0(count_distinct(BaseSamp_input, "linkid"), " Straßenabschnitte; Wochen relativ zur Eröffnung ", range_variable(BaseSamp_input, "wk2open")),
+    paste0(count_distinct(ExtendSample_input, "linkid"), " Straßenabschnitte; Wochen relativ zur Eröffnung ", range_variable(ExtendSample_input, "wk2open")),
+    paste0(count_distinct(WithAgainstTraffic_input, "linkid"), " Straßenabschnitte; WithTraffic-Anteil ", share_percent(WithAgainstTraffic_input$WithTraffic == 1), "%"),
+    paste0(count_distinct(RushNonrusHours_input, "linkid"), " Straßenabschnitte; Rush-Hour-Anteil ", share_percent(RushNonrusHours_input$rushhour == 1), "%")
   )
 ) %>%
   mutate(
     Beobachtungen = map_chr(Datenobjekt, ~ format_int(nrow(.x))),
     Variablen = map_chr(Datenobjekt, ~ format_int(ncol(.x)))
   ) %>%
-  select(
-    Datensatz,
-    `Ebene / Beobachtungseinheit`,
-    Beobachtungen,
-    Variablen,
-    `Aus den Daten berechnete Kennzahlen`,
-    `Rolle in der Replikation`
-  )
+  select(Datensatz, `Ebene der Beobachtung`, Beobachtungen, Variablen, `Aus den Daten berechnete Zusatzinfo`, `Für welche Analyse?`)
 
 dataset_overview %>%
-  kable(
-    caption = "Automatisch aus den eingelesenen Datensätzen erstellte Übersicht",
-    align = c("l", "l", "r", "r", "l", "l")
-  ) %>%
-  kable_styling(full_width = TRUE, bootstrap_options = c("striped", "hover", "condensed"))
+  kbl(caption = "Übersicht der in der Replikation verwendeten Datensätze", align = c("l", "l", "r", "r", "l", "l")) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"), full_width = TRUE) %>%
+  kable_paper(full_width = TRUE) %>%
+  add_footnote("Quelle: Eigene Berechnung aus den eingelesenen .dta-Dateien.")
 ```
 
-Die erste Übersicht zeigt Umfang und Analyseebene der einzelnen Dateien. Für die Interpretation der Replikation ist außerdem wichtig, welche Variablen in den Datensätzen tatsächlich vorhanden sind und welche Rolle sie in den späteren Abbildungen und Tabellen spielen. Die folgende Tabelle wird ebenfalls in R erzeugt; sie kombiniert ausgewählte Variablen aus den Datensätzen mit den in den `.dta`-Dateien gespeicherten Variablenlabels.
+## Stadt- und U-Bahn-Daten
 
-```{r daten-variablen-uebersicht, echo=FALSE}
-variable_label <- function(data, variable) {
-  label <- attr(data[[variable]], "label")
+`UrbanTransitReports.dta`, `SubwayLines.dta` und `CityChars.dta` beschreiben den institutionellen und städtischen Kontext der Studie. Sie zeigen, in welchen Städten U-Bahn-Systeme existieren, wann neue Linien eröffnet wurden und wie sich Bevölkerung, Wirtschaftsleistung und Verkehrsinfrastruktur unterscheiden. Diese Informationen sind wichtig, weil das Paper den Effekt neuer U-Bahn-Linien nicht isoliert von Stadtgröße, Wohlstand und allgemeiner Verkehrsentwicklung betrachtet.
 
-  if (is.null(label) || is.na(label) || label == "") {
-    return("kein Label in der Datei")
-  }
+```{r daten-stadt-u-bahn, echo=FALSE}
+latest_urban_year <- max(UrbanTransitReports_input$`年份`, na.rm = TRUE)
 
-  as.character(label)
-}
+urban_context <- UrbanTransitReports_input %>%
+  filter(`年份` == latest_urban_year) %>%
+  summarise(
+    `Städte im letzten Datenjahr` = n_distinct(`城市`),
+    `Städte mit U-Bahn` = sum(`是否开通地铁` == 1, na.rm = TRUE),
+    `U-Bahn-Länge insgesamt (km)` = sum(`轨道交通运营线路长度公里`, na.rm = TRUE),
+    `U-Bahn-Fahrgäste insgesamt (Mio.)` = sum(`轨道交通客运量万人次`, na.rm = TRUE) / 100,
+    `Private Pkw insgesamt (10.000 Fahrzeuge)` = sum(`私人汽车拥有量万辆`, na.rm = TRUE),
+    `Durchschnittliche Stadtbevölkerung (10.000)` = mean(`年末总人口万`, na.rm = TRUE)
+  ) %>%
+  pivot_longer(everything(), names_to = "Kennzahl", values_to = "Wert") %>%
+  mutate(Wert = format_num(Wert, 2))
 
-variable_type <- function(data, variable) {
-  class(data[[variable]])[1]
-}
+line_context <- SubwayLines_input %>%
+  summarise(
+    `U-Bahn-Linien` = n(),
+    `Städte` = n_distinct(city),
+    `Durchschnittliche Linienlänge (km)` = mean(lengthkm, na.rm = TRUE),
+    `Median der Linienlänge (km)` = median(lengthkm, na.rm = TRUE),
+    `Durchschnittliche Stationszahl` = mean(stations, na.rm = TRUE),
+    `Erste Eröffnung` = min(openyear, na.rm = TRUE),
+    `Letzte Eröffnung` = max(openyear, na.rm = TRUE)
+  ) %>%
+  pivot_longer(everything(), names_to = "Kennzahl", values_to = "Wert") %>%
+  mutate(Wert = as.character(format_num(as.numeric(Wert), 2)))
 
-important_variables <- tibble::tibble(
-  Datensatz = c(
-    "UrbanTransitReports.dta",
-    "SubwayLines.dta",
-    "CityChars.dta",
-    "BaseSamp.dta",
-    "ExtendSample.dta",
-    "WithAgainstTraffic.dta",
-    "RushNonrusHours.dta"
-  ),
-  Datenobjekt = list(
-    UrbanTransitReports_input,
-    SubwayLines_input,
-    CityChars_input,
-    BaseSamp_input,
-    ExtendSample_input,
-    WithAgainstTraffic_input,
-    RushNonrusHours_input
-  ),
-  Variablen = list(
-    c("城市", "年份", "轨道交通运营线路长度公里", "轨道交通客运量万人次", "民用汽车拥有量万辆", "GDP", "城市人均GDP"),
-    c("linename", "city", "lengthkm", "stations", "opendate", "openyear"),
-    c("cityname", "treat", "popx10k", "gdpx10k", "gdppc", "avgwage"),
-    c("linkid", "wk2open", "lnspd_res", "CI", "speed", "treat", "case", "roadtype"),
-    c("linkid", "wk2open", "lnspd_res", "CI", "link2_nearest_treat_line_km", "same_direct", "MostAffectedLinks", "MoreCongested", "Dp", "dist2stn"),
-    c("linkid", "wk2open", "case", "morning", "CI_WithAgainstTraffic", "lnspd_res_WithAgainstTraffic", "WithTraffic"),
-    c("linkid", "wk2open", "rushhour", "lnspd_res", "CI", "treat", "case")
-  ),
-  `Inhaltliche Bedeutung` = c(
-    "Langfristige Stadtentwicklung, öffentlicher Verkehr, U-Bahn-Ausbau und wirtschaftliche Rahmendaten.",
-    "Einzelne U-Bahn-Linien mit Stadt, Länge, Stationszahl und Eröffnungsdatum.",
-    "Stadtcharakteristika zum Vergleich von treated und control cities.",
-    "Basissample für die Hauptschätzungen auf Straßenabschnitt-Wochen-Ebene.",
-    "Erweitertes Sample für Heterogenität nach Distanz, Richtung und Ausgangsstauniveau.",
-    "Rush-Hour-Sample für die Unterscheidung zwischen Pendelrichtung und Gegenrichtung.",
-    "Sample für den Vergleich von Stoßzeiten und Nicht-Stoßzeiten."
-  )
-)
+city_context <- CityChars_input %>%
+  mutate(Gruppe = ifelse(treat == 1, "Treated cities", "Control cities")) %>%
+  group_by(Gruppe) %>%
+  summarise(
+    Städte = n(),
+    `Durchschnittliche Bevölkerung (10.000)` = mean(popx10k, na.rm = TRUE),
+    `Durchschnittliches BIP pro Kopf` = mean(gdppc, na.rm = TRUE),
+    `Durchschnittlicher Lohn` = mean(avgwage, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(across(where(is.numeric), ~ format_num(.x, 2)))
 
-important_variables %>%
+urban_context %>%
+  kbl(caption = paste0("UrbanTransitReports.dta: Stadt- und Verkehrskontext im Jahr ", latest_urban_year), align = c("l", "r")) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"), full_width = FALSE) %>%
+  kable_paper(full_width = FALSE) %>%
+  add_footnote("Quelle: Eigene Berechnung aus UrbanTransitReports.dta.")
+
+line_context %>%
+  kbl(caption = "SubwayLines.dta: Struktur der U-Bahn-Linien", align = c("l", "r")) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"), full_width = FALSE) %>%
+  kable_paper(full_width = FALSE) %>%
+  add_footnote("Quelle: Eigene Berechnung aus SubwayLines.dta.")
+
+city_context %>%
+  kbl(caption = "CityChars.dta: Treated- und Control-Cities im Vergleich", align = c("l", "r", "r", "r", "r")) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"), full_width = FALSE) %>%
+  kable_paper(full_width = FALSE) %>%
+  add_footnote("Quelle: Eigene Berechnung aus CityChars.dta.")
+```
+
+## Straßenabschnitts- und Verkehrsdaten
+
+Die eigentliche empirische Identifikation beruht auf Straßenabschnitten (`linkid`) und Wochen relativ zur Eröffnung einer U-Bahn-Linie (`wk2open`). `BaseSamp.dta` enthält das zentrale balanced panel für die Hauptergebnisse. `ExtendSample.dta` erweitert diese Struktur um räumliche Maße wie Distanzen zur nächsten Linie oder Station und Indikatoren für besonders betroffene Straßen. `WithAgainstTraffic.dta` und `RushNonrusHours.dta` ermöglichen anschließend Heterogenitätsanalysen nach Fahrtrichtung und Tageszeit.
+
+```{r daten-strassen-samples, echo=FALSE}
+traffic_sample_summary <- tibble::tibble(
+  Sample = c("BaseSamp", "ExtendSample", "WithAgainstTraffic", "RushNonrusHours"),
+  Datenobjekt = list(BaseSamp_input, ExtendSample_input, WithAgainstTraffic_input, RushNonrusHours_input)
+) %>%
   mutate(
-    `Ausgewählte Variablen` = map2_chr(
-      Datenobjekt,
-      Variablen,
-      ~ paste(.y, collapse = ", ")
-    ),
-    `Variablenlabels aus .dta` = map2_chr(
-      Datenobjekt,
-      Variablen,
-      ~ paste0(.y, " (", map_chr(.y, function(variable) variable_label(.x, variable)), ")", collapse = "; ")
-    ),
-    `Variablentypen aus R` = map2_chr(
-      Datenobjekt,
-      Variablen,
-      ~ paste0(.y, ": ", map_chr(.y, function(variable) variable_type(.x, variable)), collapse = "; ")
-    )
+    Beobachtungen = map_chr(Datenobjekt, ~ format_int(nrow(.x))),
+    `Straßenabschnitte` = map_chr(Datenobjekt, ~ count_distinct(.x, "linkid")),
+    `Vergleichsfälle` = map_chr(Datenobjekt, ~ count_distinct(.x, "case")),
+    `Wochen relativ zur Eröffnung` = map_chr(Datenobjekt, ~ range_variable(.x, "wk2open")),
+    `Ø Congestion Index` = map_chr(Datenobjekt, ~ if ("CI" %in% names(.x)) format_num(mean(.x$CI, na.rm = TRUE), 3) else format_num(mean(.x$CI_WithAgainstTraffic, na.rm = TRUE), 3)),
+    `Ø residualisierte Log-Geschwindigkeit` = map_chr(Datenobjekt, ~ if ("lnspd_res" %in% names(.x)) format_num(mean(.x$lnspd_res, na.rm = TRUE), 4) else format_num(mean(.x$lnspd_res_WithAgainstTraffic, na.rm = TRUE), 4))
   ) %>%
-  select(Datensatz, `Ausgewählte Variablen`, `Variablenlabels aus .dta`, `Variablentypen aus R`, `Inhaltliche Bedeutung`) %>%
-  kable(
-    caption = "Aus den Datensätzen erzeugte Variablenübersicht",
-    align = c("l", "l", "l", "l", "l")
+  select(-Datenobjekt)
+
+traffic_sample_summary %>%
+  kbl(caption = "Verkehrssamples: Umfang und zentrale Verkehrsmaße", align = c("l", "r", "r", "r", "l", "r", "r")) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"), full_width = TRUE) %>%
+  kable_paper(full_width = TRUE) %>%
+  add_footnote("Quelle: Eigene Berechnung aus den Verkehrsdatensätzen.")
+
+base_treatment_summary <- BaseSamp_input %>%
+  mutate(Gruppe = ifelse(treat == 1, "Treated road segments", "Control road segments")) %>%
+  group_by(Gruppe) %>%
+  summarise(
+    Beobachtungen = n(),
+    Straßenabschnitte = n_distinct(linkid),
+    `Ø Geschwindigkeit (km/h)` = mean(speed, na.rm = TRUE),
+    `Ø Congestion Index` = mean(CI, na.rm = TRUE),
+    .groups = "drop"
   ) %>%
-  kable_styling(full_width = TRUE, bootstrap_options = c("striped", "hover", "condensed"))
+  mutate(across(where(is.numeric), ~ format_num(.x, 2)))
+
+base_treatment_summary %>%
+  kbl(caption = "BaseSamp.dta: Treated- und Control-Straßen im Vergleich", align = c("l", "r", "r", "r", "r")) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"), full_width = FALSE) %>%
+  kable_paper(full_width = FALSE) %>%
+  add_footnote("Quelle: Eigene Berechnung aus BaseSamp.dta.")
+
+extend_heterogeneity_summary <- ExtendSample_input %>%
+  summarise(
+    `Direkt betroffene Straßen (%)` = mean(MostAffectedLinks == 1, na.rm = TRUE) * 100,
+    `Stärker gestaute Straßen (%)` = mean(MoreCongested == 1, na.rm = TRUE) * 100,
+    `Ø Entfernung zur nächsten behandelten Linie (km)` = mean(link2_nearest_treat_line_km, na.rm = TRUE),
+    `Ø Entfernung zur nächsten Station (km)` = mean(dist2stn, na.rm = TRUE),
+    `Anteil Post-Periode (%)` = mean(post == 1, na.rm = TRUE) * 100
+  ) %>%
+  pivot_longer(everything(), names_to = "Kennzahl", values_to = "Wert") %>%
+  mutate(Wert = format_num(Wert, 2))
+
+extend_heterogeneity_summary %>%
+  kbl(caption = "ExtendSample.dta: Variablen für Heterogenitätsanalysen", align = c("l", "r")) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"), full_width = FALSE) %>%
+  kable_paper(full_width = FALSE) %>%
+  add_footnote("Quelle: Eigene Berechnung aus ExtendSample.dta.")
 ```
+
+Diese aus R erzeugten Übersichten zeigen, wie die Datensätze zusammenhängen: Die Stadt- und Linieninformationen liefern den Kontext des U-Bahn-Ausbaus, während die Straßenabschnitts-Samples die eigentliche Schätzebene der Replikation bilden. Besonders wichtig sind `wk2open` als Ereigniszeit, `treat` als Treatment-Markierung sowie `lnspd_res` und `CI` als zentrale Ergebnis- bzw. Stauvariablen.
 
 
 
