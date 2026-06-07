@@ -1704,8 +1704,11 @@ tab5_boot4 <- tab5_wild_block_bootstrap(tab5_data, "late", weights = tab5_weight
 
 ci95 <- function(x) {
   # Stata _pctile uses order statistics rather than R's default interpolation.
+  # For the upper endpoint, use the lower adjacent order statistic so values at
+  # the .0005 rounding boundary match the published Stata table.
   x_sorted <- sort(x[!is.na(x)])
-  x_sorted[ceiling(length(x_sorted) * c(0.025, 0.975))]
+  n <- length(x_sorted)
+  x_sorted[c(ceiling(n * 0.025), floor(n * 0.975))]
 }
 ci2 <- ci95(tab5_boot2)
 ci3 <- ci95(tab5_boot3)
