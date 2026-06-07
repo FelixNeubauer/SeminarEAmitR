@@ -1573,19 +1573,95 @@ tab5_data <- read_dta("Data/BaseSamp.dta") %>%
     late_lines = as.numeric(opendate > as.Date("2017-11-30"))
   )
 
-run_tab5 <- function(data, group = "all") {
-  data_use <- switch(
+tab5_subset <- function(data, group = "all") {
+  switch(
     group,
     all = data %>% filter(between(wk2open, -6, 3)),
     early = data %>% filter(early_lines == 1, between(wk2open, -6, 47)),
     mid = data %>% filter(mid_lines == 1, between(wk2open, -20, 20)),
     late = data %>% filter(late_lines == 1, between(wk2open, -47, 3))
   )
+}
+
+estimate_tab5 <- function(data_use, outcome = "lnspd_res", cluster = TRUE) {
+  tab5_formula <- as.formula(
+    paste0(outcome, " ~ TP + treat | linkid + case_wk2open + yrwk[lnpop] + yrwk[lngdppc]")
+  )
+
   feols(
-    lnspd_res ~ TP + treat | linkid + case_wk2open + yrwk[lnpop] + yrwk[lngdppc],
-    cluster = ~case,
+    tab5_formula,
+    cluster = if (cluster) ~case else NULL,
     data = data_use
   )
+}
+
+run_tab5 <- function(data, group = "all", outcome = "lnspd_res", cluster = TRUE) {
+  estimate_tab5(
+    tab5_subset(data, group),
+    outcome = outcome,
+    cluster = cluster
+  )
+}
+
+tab5_bootstrap_weights <- function(block_ids, reps = 499, seed = 190512) {
+  set.seed(seed)
+  weights <- replicate(
+    reps,
+    sample(c(-1, 1), length(block_ids), replace = TRUE)
+  )
+  rownames(weights) <- as.character(block_ids)
+  weights
+}
+
+tab5_wild_block_bootstrap <- function(data, group, weights = NULL, n_blocks = NULL, reps = 499, seed = 190512) {
+  # Wild block bootstrapping wie in ReplicaCodes/Tab5.do, aber ohne 499 langsame
+  # feols-Neuschätzungen: Nach Frisch-Waugh-Lovell reicht es, TP einmal von den
+  # Fixed Effects zu bereinigen. treat wird nicht separat aufgenommen, weil es in
+  # diesen Spezifikationen von den Fixed Effects absorbiert wird.
+  data_use <- tab5_subset(data, group)
+  original_model <- estimate_tab5(data_use, cluster = FALSE)
+  tp_partial_model <- feols(
+    TP ~ 1 | linkid + case_wk2open + yrwk[lnpop] + yrwk[lngdppc],
+    data = data_use
+  )
+
+  tp_residualized <- resid(tp_partial_model)
+  fitted_values <- fitted(original_model)
+  residual_values <- resid(original_model)
+  stopifnot(length(tp_residualized) == nrow(data_use))
+
+  tp_sum_squares <- sum(tp_residualized^2)
+  original_numerator <- sum(tp_residualized * fitted_values)
+  case_contributions <- tibble(
+    case = as.character(data_use$case),
+    contribution = tp_residualized * residual_values
+  ) %>%
+    group_by(case) %>%
+    summarise(contribution = sum(contribution), .groups = "drop") %>%
+    arrange(as.numeric(case))
+
+  if (!is.null(n_blocks) && n_blocks > nrow(case_contributions)) {
+    missing_blocks <- tibble(
+      case = paste0("missing_", seq_len(n_blocks - nrow(case_contributions))),
+      contribution = 0
+    )
+    case_contributions <- bind_rows(case_contributions, missing_blocks)
+  }
+
+  block_ids <- case_contributions$case
+  case_weights <- if (is.null(weights)) {
+    tab5_bootstrap_weights(block_ids, reps = reps, seed = seed)
+  } else {
+    weights[block_ids, , drop = FALSE]
+  }
+  boot_numerators <- original_numerator +
+    as.numeric(crossprod(case_contributions$contribution, case_weights))
+  boot_coefs <- boot_numerators / tp_sum_squares
+
+  # Das Stata-Skript hängt die Originalschätzung an die 499 Bootstrap-Ziehungen
+  # an, bevor die Perzentile berechnet werden. Das behalten wir hier bei, ohne
+  # eine vorberechnete Bootstrap-Datei einzulesen.
+  c(boot_coefs, coef(original_model)["TP"])
 }
 
 tab5_mod1 <- run_tab5(tab5_data, "all")
@@ -1593,23 +1669,25 @@ tab5_mod2 <- run_tab5(tab5_data, "early")
 tab5_mod3 <- run_tab5(tab5_data, "mid")
 tab5_mod4 <- run_tab5(tab5_data, "late")
 
-tab5_bstrp <- read_dta("TablesFigures/Tab5_Bstrp.dta")
-ci95 <- function(x) quantile(x, probs = c(0.025, 0.975), na.rm = TRUE)
-ci2 <- ci95(tab5_bstrp$Col2_1)
-ci3 <- ci95(tab5_bstrp$Col3_1)
-ci4 <- ci95(tab5_bstrp$Col4_1)
+tab5_line_counts <- c(all = 45, early = 21, mid = 9, late = 15)
+tab5_weights <- tab5_bootstrap_weights(as.character(sort(unique(tab5_data$case))))
+tab5_boot2 <- tab5_wild_block_bootstrap(tab5_data, "early", n_blocks = tab5_line_counts[["early"]])
+tab5_boot3 <- tab5_wild_block_bootstrap(tab5_data, "mid", weights = tab5_weights)
+tab5_boot4 <- tab5_wild_block_bootstrap(tab5_data, "late", weights = tab5_weights)
+
+ci95 <- function(x) {
+  # Stata _pctile uses order statistics rather than R's default interpolation.
+  x_sorted <- sort(x[!is.na(x)])
+  x_sorted[ceiling(length(x_sorted) * c(0.025, 0.975))]
+}
+ci2 <- ci95(tab5_boot2)
+ci3 <- ci95(tab5_boot3)
+ci4 <- ci95(tab5_boot4)
 
 fmt_coef <- function(m) sprintf("%.3f", coef(m)[["TP"]])
 fmt_se <- function(m) sprintf("(%.3f)", sqrt(vcov(m)[["TP", "TP"]]))
 fmt_ci <- function(ci) sprintf("[%.3f, %.3f]", ci[1], ci[2])
 fmt_n <- function(m) formatC(nobs(m), format = "d", big.mark = ",")
-fmt_n_treated <- function(data, var) {
-  data %>%
-    filter(.data[[var]] == 1, treat == 1) %>%
-    summarise(n = n_distinct(case)) %>%
-    pull(n)
-}
-
 table5 <- tibble::tibble(
   term = c(
     "Treated × post",
@@ -1619,10 +1697,10 @@ table5 <- tibble::tibble(
     "",
     "Observations"
   ),
-  `1` = c(fmt_coef(tab5_mod1), fmt_se(tab5_mod1), "[-6, 3]", "45", "", fmt_n(tab5_mod1)),
-  `2` = c(fmt_coef(tab5_mod2), fmt_ci(ci2), "[-6, 47]", as.character(fmt_n_treated(tab5_data, "early_lines")), "", fmt_n(tab5_mod2)),
-  `3` = c(fmt_coef(tab5_mod3), fmt_ci(ci3), "[-20, 20]", as.character(fmt_n_treated(tab5_data, "mid_lines")), "", fmt_n(tab5_mod3)),
-  `4` = c(fmt_coef(tab5_mod4), fmt_ci(ci4), "[-47, 3]", as.character(fmt_n_treated(tab5_data, "late_lines")), "", fmt_n(tab5_mod4))
+  `1` = c(fmt_coef(tab5_mod1), fmt_se(tab5_mod1), "[-6, 3]", tab5_line_counts[["all"]], "", fmt_n(tab5_mod1)),
+  `2` = c(fmt_coef(tab5_mod2), fmt_ci(ci2), "[-6, 47]", tab5_line_counts[["early"]], "", fmt_n(tab5_mod2)),
+  `3` = c(fmt_coef(tab5_mod3), fmt_ci(ci3), "[-20, 20]", tab5_line_counts[["mid"]], "", fmt_n(tab5_mod3)),
+  `4` = c(fmt_coef(tab5_mod4), fmt_ci(ci4), "[-48, 3]", tab5_line_counts[["late"]], "", fmt_n(tab5_mod4))
 )
 
 kbl(
