@@ -1244,6 +1244,7 @@ kable(
   )
 ```
 
+*Grafik selbst erstellt in Anlehnung an Table 2 aus Gu et. al (2021).*
 
 ```{css, echo=FALSE}
 
@@ -1615,6 +1616,8 @@ kableExtra::kbl(
   )
 ```
 
+*Grafik selbst erstellt in Anlehnung an Table 3 aus Gu et. al (2021).*
+
 ```{css, echo=FALSE}
 .table3-original thead th {
   text-align: center !important;
@@ -1726,6 +1729,8 @@ kbl(
     escape = FALSE
   )
 ```
+
+*Grafik selbst erstellt in Anlehnung an Table 4 aus Gu et. al (2021).*
 
 ```{css, echo=FALSE}
 .table4-original thead th {
@@ -1971,6 +1976,8 @@ kbl(
     escape = FALSE
   )
 ```
+
+*Grafik selbst erstellt in Anlehnung an Table 5 aus Gu et. al (2021).*
 
 ```{css, echo=FALSE}
 .table5-original thead th {
