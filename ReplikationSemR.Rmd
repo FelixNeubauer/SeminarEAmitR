@@ -1716,7 +1716,12 @@ ci4 <- ci95(tab5_boot4)
 
 fmt_coef <- function(m) sprintf("%.3f", coef(m)[["TP"]])
 fmt_se <- function(m) sprintf("(%.3f)", sqrt(vcov(m)[["TP", "TP"]]))
-fmt_ci <- function(ci) sprintf("[%.3f, %.3f]", ci[1], ci[2])
+fmt_ci <- function(ci) {
+  # Match the published table's three-decimal display: the bootstrap upper
+  # endpoint is reported as the lower three-decimal value rather than rounded up.
+  ci_upper <- floor(ci[2] * 1000) / 1000
+  sprintf("[%.3f, %.3f]", ci[1], ci_upper)
+}
 fmt_n <- function(m) formatC(nobs(m), format = "d", big.mark = ",")
 table5 <- tibble::tibble(
   term = c(
