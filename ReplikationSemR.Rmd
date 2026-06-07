@@ -1613,7 +1613,7 @@ tab5_bootstrap_weights <- function(block_ids, reps = 499, seed = 190512) {
   weights
 }
 
-tab5_wild_block_bootstrap <- function(data, group, block_ids, weights = NULL, reps = 499, seed = 190512) {
+tab5_wild_block_bootstrap <- function(data, group, weights = NULL, n_blocks = NULL, reps = 499, seed = 190512) {
   # Wild block bootstrapping wie in ReplicaCodes/Tab5.do, aber ohne 499 langsame
   # feols-Neuschätzungen: Nach Frisch-Waugh-Lovell reicht es, TP einmal von den
   # Fixed Effects zu bereinigen. treat wird nicht separat aufgenommen, weil es in
@@ -1633,19 +1633,26 @@ tab5_wild_block_bootstrap <- function(data, group, block_ids, weights = NULL, re
   tp_sum_squares <- sum(tp_residualized^2)
   original_numerator <- sum(tp_residualized * fitted_values)
   case_contributions <- tibble(
-    case = data_use$case,
+    case = as.character(data_use$case),
     contribution = tp_residualized * residual_values
   ) %>%
     group_by(case) %>%
     summarise(contribution = sum(contribution), .groups = "drop") %>%
-    right_join(tibble(case = block_ids), by = "case") %>%
-    mutate(contribution = coalesce(contribution, 0)) %>%
-    arrange(match(case, block_ids))
+    arrange(as.numeric(case))
 
+  if (!is.null(n_blocks) && n_blocks > nrow(case_contributions)) {
+    missing_blocks <- tibble(
+      case = paste0("missing_", seq_len(n_blocks - nrow(case_contributions))),
+      contribution = 0
+    )
+    case_contributions <- bind_rows(case_contributions, missing_blocks)
+  }
+
+  block_ids <- case_contributions$case
   case_weights <- if (is.null(weights)) {
     tab5_bootstrap_weights(block_ids, reps = reps, seed = seed)
   } else {
-    weights[as.character(block_ids), , drop = FALSE]
+    weights[block_ids, , drop = FALSE]
   }
   boot_numerators <- original_numerator +
     as.numeric(crossprod(case_contributions$contribution, case_weights))
@@ -1662,19 +1669,11 @@ tab5_mod2 <- run_tab5(tab5_data, "early")
 tab5_mod3 <- run_tab5(tab5_data, "mid")
 tab5_mod4 <- run_tab5(tab5_data, "late")
 
-tab5_line_blocks <- list(
-  # case is numbered by treated line. The early subsample contains 21 treated
-  # lines in the paper even though one line has no treated road segment in this
-  # estimation sample; it still has to be represented as a zero-contribution
-  # bootstrap block so the wild-block draw uses all 21 launch blocks.
-  early = 1:21,
-  mid = 22:30,
-  late = 31:45
-)
-tab5_weights <- tab5_bootstrap_weights(sort(unique(tab5_data$case)))
-tab5_boot2 <- tab5_wild_block_bootstrap(tab5_data, "early", block_ids = tab5_line_blocks$early)
-tab5_boot3 <- tab5_wild_block_bootstrap(tab5_data, "mid", block_ids = tab5_line_blocks$mid, weights = tab5_weights)
-tab5_boot4 <- tab5_wild_block_bootstrap(tab5_data, "late", block_ids = tab5_line_blocks$late, weights = tab5_weights)
+tab5_line_counts <- c(all = 45, early = 21, mid = 9, late = 15)
+tab5_weights <- tab5_bootstrap_weights(as.character(sort(unique(tab5_data$case))))
+tab5_boot2 <- tab5_wild_block_bootstrap(tab5_data, "early", n_blocks = tab5_line_counts[["early"]])
+tab5_boot3 <- tab5_wild_block_bootstrap(tab5_data, "mid", weights = tab5_weights)
+tab5_boot4 <- tab5_wild_block_bootstrap(tab5_data, "late", weights = tab5_weights)
 
 ci95 <- function(x) {
   # Stata _pctile uses order statistics rather than R's default interpolation.
@@ -1684,8 +1683,6 @@ ci95 <- function(x) {
 ci2 <- ci95(tab5_boot2)
 ci3 <- ci95(tab5_boot3)
 ci4 <- ci95(tab5_boot4)
-
-tab5_line_counts <- c(all = 45, early = 21, mid = 9, late = 15)
 
 fmt_coef <- function(m) sprintf("%.3f", coef(m)[["TP"]])
 fmt_se <- function(m) sprintf("(%.3f)", sqrt(vcov(m)[["TP", "TP"]]))
