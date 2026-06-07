@@ -1613,7 +1613,26 @@ tab5_bootstrap_weights <- function(block_ids, reps = 499, seed = 190512) {
   weights
 }
 
-tab5_wild_block_bootstrap <- function(data, group, weights = NULL, n_blocks = NULL, reps = 499, seed = 190512) {
+tab5_exact_wild_draws <- function(contributions, original_numerator, tp_sum_squares, chunk_size = 50000) {
+  contributions <- contributions[contributions != 0]
+  n_blocks <- length(contributions)
+  n_draws <- 2^n_blocks
+  draws <- numeric(n_draws)
+
+  for (chunk_start in seq(0, n_draws - 1, by = chunk_size)) {
+    chunk_end <- min(chunk_start + chunk_size - 1, n_draws - 1)
+    draw_ids <- as.integer(chunk_start:chunk_end)
+    sign_matrix <- vapply(seq_len(n_blocks), function(block) {
+      ifelse(bitwAnd(draw_ids, bitwShiftL(1L, block - 1L)) == 0L, -1, 1)
+    }, numeric(length(draw_ids)))
+    draws[(chunk_start + 1):(chunk_end + 1)] <-
+      (original_numerator + as.numeric(sign_matrix %*% contributions)) / tp_sum_squares
+  }
+
+  draws
+}
+
+tab5_wild_block_bootstrap <- function(data, group, weights = NULL, n_blocks = NULL, reps = 499, seed = 190512, exact = FALSE) {
   # Wild block bootstrapping wie in ReplicaCodes/Tab5.do, aber ohne 499 langsame
   # feols-Neuschätzungen: Nach Frisch-Waugh-Lovell reicht es, TP einmal von den
   # Fixed Effects zu bereinigen. treat wird nicht separat aufgenommen, weil es in
@@ -1649,14 +1668,22 @@ tab5_wild_block_bootstrap <- function(data, group, weights = NULL, n_blocks = NU
   }
 
   block_ids <- case_contributions$case
-  case_weights <- if (is.null(weights)) {
-    tab5_bootstrap_weights(block_ids, reps = reps, seed = seed)
+  if (exact) {
+    boot_coefs <- tab5_exact_wild_draws(
+      case_contributions$contribution,
+      original_numerator,
+      tp_sum_squares
+    )
   } else {
-    weights[block_ids, , drop = FALSE]
+    case_weights <- if (is.null(weights)) {
+      tab5_bootstrap_weights(block_ids, reps = reps, seed = seed)
+    } else {
+      weights[block_ids, , drop = FALSE]
+    }
+    boot_numerators <- original_numerator +
+      as.numeric(crossprod(case_contributions$contribution, case_weights))
+    boot_coefs <- boot_numerators / tp_sum_squares
   }
-  boot_numerators <- original_numerator +
-    as.numeric(crossprod(case_contributions$contribution, case_weights))
-  boot_coefs <- boot_numerators / tp_sum_squares
 
   # Das Stata-Skript hängt die Originalschätzung an die 499 Bootstrap-Ziehungen
   # an, bevor die Perzentile berechnet werden. Das behalten wir hier bei, ohne
@@ -1671,7 +1698,7 @@ tab5_mod4 <- run_tab5(tab5_data, "late")
 
 tab5_line_counts <- c(all = 45, early = 21, mid = 9, late = 15)
 tab5_weights <- tab5_bootstrap_weights(as.character(sort(unique(tab5_data$case))))
-tab5_boot2 <- tab5_wild_block_bootstrap(tab5_data, "early", n_blocks = tab5_line_counts[["early"]])
+tab5_boot2 <- tab5_wild_block_bootstrap(tab5_data, "early", n_blocks = tab5_line_counts[["early"]], exact = TRUE)
 tab5_boot3 <- tab5_wild_block_bootstrap(tab5_data, "mid", weights = tab5_weights)
 tab5_boot4 <- tab5_wild_block_bootstrap(tab5_data, "late", weights = tab5_weights)
 
