@@ -6,16 +6,20 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
+# Globale Chunk-Optionen setzen
 knitr::opts_chunk$set(echo = FALSE, warnings = FALSE, messages = FALSE)
 
+# Ganze Zahlen im deutschen Format ausgeben
 format_int <- function(x) {
   format(x, big.mark = ".", decimal.mark = ",", scientific = FALSE, trim = TRUE)
 }
 
+# Dezimalzahlen runden und formatiert ausgeben
 format_num <- function(x, digits = 2) {
   format(round(x, digits), big.mark = ".", decimal.mark = ",", scientific = FALSE, trim = TRUE)
 }
 
+# Minimal- und Maximalwert als Spannweite ausgeben
 format_range <- function(x) {
   x <- x[!is.na(x)]
 
@@ -26,6 +30,7 @@ format_range <- function(x) {
   paste0(format(min(x), scientific = FALSE, trim = TRUE), "--", format(max(x), scientific = FALSE, trim = TRUE))
 }
 
+# Unterschiedliche Werte einer vorhandenen Variable zählen
 count_distinct <- function(data, variable) {
   if (!variable %in% names(data)) {
     return("--")
@@ -34,6 +39,7 @@ count_distinct <- function(data, variable) {
   format_int(dplyr::n_distinct(data[[variable]], na.rm = TRUE))
 }
 
+# Spannweite einer vorhandenen Variable berechnen
 range_variable <- function(data, variable) {
   if (!variable %in% names(data)) {
     return("--")
@@ -42,12 +48,14 @@ range_variable <- function(data, variable) {
   format_range(data[[variable]])
 }
 
+# Anteil als Prozentwert ausgeben
 share_percent <- function(x) {
   format_num(mean(x, na.rm = TRUE) * 100, 1)
 }
 ```
 
 ```{r libraries, include=FALSE}
+# Benötigte Pakete laden
 library(haven)
 library(dplyr)
 library(ggplot2)
@@ -64,6 +72,7 @@ library(readr)
 ```
 
 ```{r datainput, include=FALSE}
+# Rohdaten aus dem Data-Ordner einlesen
 UrbanTransitReports_input <- read_dta("Data/UrbanTransitReports.dta")
 SubwayLines_input <- read_dta("Data/SubwayLines.dta")
 data_table1_input <- read_dta("Data/data_table1.dta")
@@ -97,6 +106,7 @@ Der folgende Abschnitt orientiert sich am Stil einer kurzen Datendokumentation: 
 Die Replikation nutzt einerseits Stadt- und U-Bahn-Daten, mit denen der langfristige Ausbau des chinesischen U-Bahn-Netzes beschrieben wird. Andererseits bilden die Straßenabschnittsdaten die Grundlage der Difference-in-Differences-Analysen: Dort wird verglichen, wie sich Geschwindigkeiten und Stau auf behandelten Straßen relativ zu Kontrollstraßen um den Eröffnungszeitpunkt neuer U-Bahn-Linien entwickeln.
 
 ```{r daten-uebersicht, echo=FALSE}
+# Überblickstabelle mit Datensatzrollen anlegen
 dataset_overview <- tibble::tibble(
   Datensatz = c(
     "Data/UrbanTransitReports.dta",
@@ -144,12 +154,14 @@ dataset_overview <- tibble::tibble(
     paste0(count_distinct(RushNonrusHours_input, "linkid"), " Straßenabschnitte; Rush-Hour-Anteil ", share_percent(RushNonrusHours_input$rushhour == 1), "%")
   )
 ) %>%
+  # Beobachtungen und Variablen je Datensatz ergänzen
   mutate(
     Beobachtungen = map_chr(Datenobjekt, ~ format_int(nrow(.x))),
     Variablen = map_chr(Datenobjekt, ~ format_int(ncol(.x)))
   ) %>%
   select(Datensatz, `Ebene der Beobachtung`, Beobachtungen, Variablen, `Aus den Daten berechnete Zusatzinfo`, `Für welche Analyse?`)
 
+# Überblickstabelle ausgeben
 dataset_overview %>%
   kbl(caption = "Übersicht der in der Replikation verwendeten Datensätze", align = c("l", "l", "r", "r", "l", "l")) %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"), full_width = TRUE) %>%
@@ -162,8 +174,10 @@ dataset_overview %>%
 `SubwayLines.dta` und `CityChars.dta` beschreiben den institutionellen und städtischen Kontext der Studie. Sie zeigen, in welchen Städten U-Bahn-Systeme existieren, wann neue Linien eröffnet wurden und wie sich Bevölkerung, Wirtschaftsleistung und Verkehrsinfrastruktur unterscheiden. Diese Informationen sind wichtig, weil das Paper den Effekt neuer U-Bahn-Linien nicht isoliert von Stadtgröße, Wohlstand und allgemeiner Verkehrsentwicklung betrachtet.
 
 ```{r daten-stadt-u-bahn, echo=FALSE}
+# Letztes verfügbares Jahr bestimmen
 latest_urban_year <- max(UrbanTransitReports_input$`年份`, na.rm = TRUE)
 
+# Stadtkennzahlen für das letzte Datenjahr berechnen
 urban_context <- UrbanTransitReports_input %>%
   filter(`年份` == latest_urban_year) %>%
   summarise(
@@ -177,6 +191,7 @@ urban_context <- UrbanTransitReports_input %>%
   pivot_longer(everything(), names_to = "Kennzahl", values_to = "Wert") %>%
   mutate(Wert = format_num(Wert, 2))
 
+# Kennzahlen zu U-Bahn-Linien berechnen
 line_context <- SubwayLines_input %>%
   summarise(
     `U-Bahn-Linien` = n(),
@@ -190,6 +205,7 @@ line_context <- SubwayLines_input %>%
   pivot_longer(everything(), names_to = "Kennzahl", values_to = "Wert") %>%
   mutate(Wert = as.character(format_num(as.numeric(Wert), 2)))
 
+# Treated- und Control-Cities vergleichen
 city_context <- CityChars_input %>%
   mutate(Gruppe = ifelse(treat == 1, "Treated cities", "Control cities")) %>%
   group_by(Gruppe) %>%
@@ -204,12 +220,14 @@ city_context <- CityChars_input %>%
 
 
 
+# Linienübersicht ausgeben
 line_context %>%
   kbl(caption = "SubwayLines.dta: Struktur der U-Bahn-Linien", align = c("l", "r")) %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"), full_width = FALSE) %>%
   kable_paper(full_width = FALSE) %>%
   add_footnote("Quelle: Eigene Berechnung aus SubwayLines.dta.")
 
+# Stadtvergleich ausgeben
 city_context %>%
   kbl(caption = "CityChars.dta: Treated- und Control-Cities im Vergleich", align = c("l", "r", "r", "r", "r")) %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"), full_width = FALSE) %>%
@@ -222,6 +240,7 @@ city_context %>%
 Die eigentliche empirische Identifikation beruht auf Straßenabschnitten (`linkid`) und Wochen relativ zur Eröffnung einer U-Bahn-Linie (`wk2open`). `BaseSamp.dta` enthält das zentrale balanced panel für die Hauptergebnisse. `ExtendSample.dta` erweitert diese Struktur um räumliche Maße wie Distanzen zur nächsten Linie oder Station und Indikatoren für besonders betroffene Straßen. `WithAgainstTraffic.dta` und `RushNonrusHours.dta` ermöglichen anschließend Heterogenitätsanalysen nach Fahrtrichtung und Tageszeit.
 
 ```{r daten-strassen-samples, echo=FALSE}
+# Verkehrssamples zusammenfassen
 traffic_sample_summary <- tibble::tibble(
   Sample = c("BaseSamp", "ExtendSample", "WithAgainstTraffic", "RushNonrusHours"),
   Datenobjekt = list(BaseSamp_input, ExtendSample_input, WithAgainstTraffic_input, RushNonrusHours_input)
@@ -236,12 +255,14 @@ traffic_sample_summary <- tibble::tibble(
   ) %>%
   select(-Datenobjekt)
 
+# Tabelle der Verkehrssamples ausgeben
 traffic_sample_summary %>%
   kbl(caption = "Verkehrssamples: Umfang und zentrale Verkehrsmaße", align = c("l", "r", "r", "r", "l", "r", "r")) %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"), full_width = TRUE) %>%
   kable_paper(full_width = TRUE) %>%
   add_footnote("Quelle: Eigene Berechnung aus den Verkehrsdatensätzen.")
 
+# Treatment- und Kontrollstraßen im Basissample vergleichen
 base_treatment_summary <- BaseSamp_input %>%
   mutate(Gruppe = ifelse(treat == 1, "Treated road segments", "Control road segments")) %>%
   group_by(Gruppe) %>%
@@ -254,12 +275,14 @@ base_treatment_summary <- BaseSamp_input %>%
   ) %>%
   mutate(across(where(is.numeric), ~ format_num(.x, 2)))
 
+# Basissample-Vergleich ausgeben
 base_treatment_summary %>%
   kbl(caption = "BaseSamp.dta: Treated- und Control-Straßen im Vergleich", align = c("l", "r", "r", "r", "r")) %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"), full_width = FALSE) %>%
   kable_paper(full_width = FALSE) %>%
   add_footnote("Quelle: Eigene Berechnung aus BaseSamp.dta.")
 
+# Heterogenitätsvariablen zusammenfassen
 extend_heterogeneity_summary <- ExtendSample_input %>%
   summarise(
     `Direkt betroffene Straßen (%)` = mean(MostAffectedLinks == 1, na.rm = TRUE) * 100,
@@ -271,6 +294,7 @@ extend_heterogeneity_summary <- ExtendSample_input %>%
   pivot_longer(everything(), names_to = "Kennzahl", values_to = "Wert") %>%
   mutate(Wert = format_num(Wert, 2))
 
+# Heterogenitätsübersicht ausgeben
 extend_heterogeneity_summary %>%
   kbl(caption = "ExtendSample.dta: Variablen für Heterogenitätsanalysen", align = c("l", "r")) %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"), full_width = FALSE) %>%
@@ -285,7 +309,7 @@ Diese Übersichten zeigen, wie die Datensätze zusammenhängen: Die Stadt- und L
 ##### Figure 1
 
 ```{r DataUrbantransitVorbereiten, echo=FALSE, include = FALSE}
-# Datensatz einlesten
+# Datensatz einlesen
 urban <- UrbanTransitReports_input
 
 # Spaltennamen übersetzen
@@ -413,8 +437,8 @@ annual_temp <- annual_temp %>%
 
 
 
-# der Rest der Daten kommt aus SubwayLines.dta, hier lines_nohk
-# Wir beginnen damit, für jedes Eröffnungsjahr die neu hinzugekommene Streckenlänge aufzusummieren
+# Restliche Daten aus SubwayLines.dta nutzen
+# Neu hinzugekommene Streckenlänge je Eröffnungsjahr aufsummieren
 
 lines_year <- lines_nohk %>%
   group_by(openyear) %>%
@@ -424,14 +448,14 @@ lines_year <- lines_nohk %>%
   ) %>%
   arrange(openyear)
 
-# Daraus bilden wir die laufende kumulative Summe, sprich die tatsächliche Länge für jedes Jahr
+# Laufende kumulative Summe als tatsächliche Länge je Jahr bilden
 lines_year <- lines_year %>%
   mutate(
     subway_length2 = cumsum(lengthkm)
   )
 
 
-# für merge openyear in year umbenennen
+# Für den Merge openyear in year umbenennen
 
 lines_year <- lines_year %>%
   rename(year = openyear) %>%
@@ -468,14 +492,14 @@ fig1_df <- fig1_df %>%
   )
 
 
-# wie in originaler Grafik Begrenzung auf Jahre ab 2000
+# Wie in originaler Grafik Begrenzung auf Jahre ab 2000
 plot_df <- fig1_df %>%
   filter(year >= 2000, year <= 2017)
 
 ```
 
 ```{r plotfig1, echo=FALSE, fig.cap='Grafik selbst erstellt in Anlehnung an Figure 1 aus Gu et. al (2021)'}
-# ggplot benötigt einen skalierungsfaktor für die rechte achse
+# Skalierungsfaktor für die rechte Achse festlegen
 scale_factor <- 3.2
 
 
@@ -516,7 +540,7 @@ p_fig1 <- ggplot(plot_df, aes(x = year)) +
     values = c("ridership" = "#6d8d84", "length" = "#90343a"),
     breaks = c("ridership", "length")
   ) +
-  # X-Achse beschriftung
+  # X-Achse beschriften
   labs(
     x = "year",
     color = NULL
@@ -581,7 +605,7 @@ p_fig1
 ```
 
 ```{r plotfig1Figma, echo=FALSE, include=FALSE, dpi=300}
-# ggplot benötigt einen skalierungsfaktor für die rechte achse
+# Skalierungsfaktor für die rechte Achse festlegen
 scale_factor <- 3.2
 
 
@@ -622,7 +646,7 @@ p_fig1_figma <- ggplot(plot_df, aes(x = year)) +
     values = c("ridership" = "#8BAFAC", "length" = "#171738"),
     breaks = c("ridership", "length")
   ) +
-  # X-Achse beschriftung
+  # X-Achse beschriften
   labs(
     x = "year",
     color = NULL
@@ -687,7 +711,7 @@ p_fig1_figma
 ```
 
 ```{r fig1_save, include=FALSE}
-# Grafik als png speichern
+# Grafik als PNG speichern
 ggsave(
   filename = "FertigeGrafiken/Fig1_R.png",
   plot = p_fig1
@@ -697,7 +721,7 @@ ggsave(
 ```
 
 ```{r fig1_save_figma, include=FALSE}
-# Grafik als png speichern
+# Grafik als PNG speichern
 ggsave(
   filename = "FertigeGrafiken/Fig1_R_Figma.png",
   plot = p_fig1_figma
@@ -709,7 +733,7 @@ ggsave(
 ##### Table 1 Grafik
 
 ```{r grafik1_daten}
-# Daten manuell aus Table 1
+# Daten aus Table 1 für die Monatsgrafik vorbereiten
 data_grafik1_monat <- data_table1_input %>%
   mutate(
     panel = factor(
@@ -764,8 +788,8 @@ map_year_grafik1 <- function(year) {
 
 # Punkte mit identischem Monat und Jahr werden horizontal nebeneinander
 # angeordnet. So bleiben Mehrfacheröffnungen panelübergreifend sichtbar,
-# ohne dass sie sich überdecken. Die Span eines CLusters ist dabei Ab-
-# hängig von der Anzahl an Eröffnungen im Monat
+# ohne dass sie sich überdecken. Die Breite eines Clusters hängt dabei
+# von der Anzahl an Eröffnungen im Monat ab.
 data_grafik1_monat_cluster <- data_grafik1_monat %>%
   group_by(opening_year, x_plot) %>%
   arrange(panel, line_status, opening_date, .by_group = TRUE) %>%
@@ -976,9 +1000,11 @@ stata_quantile <- function(x, probs) {
 ```
 
 ```{r table2_panel_a, include=FALSE}
+# Stadtvariablen für Panel A vorbereiten
 table2_city <- CityChars_input %>%
   mutate(pop_million = popx10k / 100)
 
+# Kennzahlen für eine Stadtvariable berechnen
 summarise_city_var <- function(data, variable, digits) {
   values <- data[[variable]]
   c(
@@ -989,6 +1015,7 @@ summarise_city_var <- function(data, variable, digits) {
   )
 }
 
+# Eine Tabellenzeile für eine Stadtgruppe erzeugen
 make_city_stats_row <- function(variable_label, group_label, treat_value, source_variable, digits) {
   group_data <- table2_city %>%
     filter(treat == treat_value)
@@ -1006,6 +1033,7 @@ make_city_stats_row <- function(variable_label, group_label, treat_value, source
   )
 }
 
+# Kennzahlen für behandelte und Kontrollstädte sammeln
 city_stats <- bind_rows(
   make_city_stats_row("population (million)", "treated cities", 1, "pop_million", 2),
   make_city_stats_row("GDP per capita (yuan)", "treated cities", 1, "gdppc", 0),
@@ -1013,6 +1041,7 @@ city_stats <- bind_rows(
   make_city_stats_row("GDP per capita (yuan)", "control cities", 0, "gdppc", 0)
 )
 
+# Panel A in das Tabellenformat bringen
 table2_panel_a <- city_stats %>%
   select(variable, group, n_cities, digits, mean, p25, median, p75) %>%
   pivot_wider(
@@ -1055,6 +1084,7 @@ table2_n_control <- unique(city_stats$n_cities[city_stats$group == "control citi
 ```
 
 ```{r table2_panel_b, include=FALSE}
+# Straßendaten auf das Table-2-Fenster begrenzen
 table2_roads <- BaseSamp_input %>%
   filter(between(wk2open, -6, 47)) %>%
   mutate(
@@ -1066,6 +1096,7 @@ table2_roads <- BaseSamp_input %>%
     )
   )
 
+# Kennzahlen für Straßen nach Gruppe und Typ berechnen
 summarise_roads <- function(data, group_value, road_value = NULL) {
   sample_data <- data %>%
     filter(treatment_group == group_value)
@@ -1083,8 +1114,10 @@ summarise_roads <- function(data, group_value, road_value = NULL) {
   )
 }
 
+# Zeilenreihenfolge für Panel B festlegen
 road_rows <- c("all road segments", levels(table2_roads$road_type))
 
+# Rohwerte für Panel B berechnen
 table2_panel_b_raw <- bind_rows(
   lapply(road_rows, function(row_name) {
     road_filter <- if (row_name == "all road segments") NULL else row_name
@@ -1099,6 +1132,7 @@ table2_panel_b_raw <- bind_rows(
   })
 )
 
+# Panel B für die Ausgabe formatieren
 table2_panel_b <- table2_panel_b_raw %>%
   transmute(
     road_type,
@@ -1114,6 +1148,7 @@ table2_panel_b <- table2_panel_b_raw %>%
 ```
 
 ```{r table2_original_kableextra, results='asis', echo=FALSE, message=FALSE, warning=FALSE}
+# Zusatzpaket für die HTML-Tabelle laden
 library(kableExtra)
 
 # Labels etwas näher am Original
@@ -1420,6 +1455,7 @@ kable(
 
 ##### Figure 2
 ```{r fig2_data, echo=FALSE}
+# Basissample auf das Event-Study-Fenster begrenzen
 base_samp <- BaseSamp_input %>%
   filter(between(wk2open, -6, 47))
 
@@ -1516,20 +1552,22 @@ p_fig2_c <- plot_fig2_panel(fig2_c_df, "Panel C. Two-way fixed effects, accounti
 ```
 
 ```{r fig2_panel_a, include=FALSE, fig.width=7, fig.height=4.5, fig.cap='Grafik selbst erstellt in Anlehnung an Figure 2 aus Gu et. al (2021)'}
+# Panel A separat ausgeben
 p_fig2_a
 ```
 
 ```{r fig2_panel_b, include=FALSE, fig.width=7, fig.height=4.5, fig.cap='Grafik selbst erstellt in Anlehnung an Figure 2 aus Gu et. al (2021)'}
+# Panel B separat ausgeben
 p_fig2_b
 ```
 
 ```{r fig2_panel_c, include=FALSE, fig.width=7, fig.height=4.5, fig.cap='Grafik selbst erstellt in Anlehnung an Figure 2 aus Gu et. al (2021)'}
+# Panel C separat ausgeben
 p_fig2_c
 ```
 
 ```{r fig2_combined, echo=FALSE, fig.width=10, fig.height=7.5, fig.cap='Grafik selbst erstellt in Anlehnung an Figure 2 aus Gu et. al (2021)'}
-
-
+# Drei Panels zu einer Abbildung kombinieren
 (
   (p_fig2_a | p_fig2_b) /
   (p_fig2_c | plot_spacer())
@@ -1543,6 +1581,7 @@ p_fig2_c
 ##### Table 3
 
 ```{r table3_baseline_estimates, results='asis', echo=FALSE}
+# Treatment-Post-Interaktion für Table 3 erzeugen
 tab3_data <- BaseSamp_input %>%
   mutate(
     post = as.numeric(wk2open >= 0),
@@ -1568,10 +1607,12 @@ tab3_mod3 <- feols(
   cluster = ~case
 )
 
+# Ausgabeformate für Koeffizienten, Standardfehler und Fallzahlen
 fmt_coef <- function(m) sprintf("%.3f", coef(m)[["TP"]])
 fmt_se <- function(m) sprintf("(%.3f)", sqrt(vcov(m)[["TP", "TP"]]))
 fmt_n <- function(m) formatC(nobs(m), format = "d", big.mark = ",")
 
+# Ergebnistabelle für Table 3 zusammenbauen
 table3 <- tibble::tibble(
   term = c(
     "Treated × post",
@@ -1590,6 +1631,7 @@ table3 <- tibble::tibble(
   `3` = c(fmt_coef(tab3_mod3), fmt_se(tab3_mod3), "Two-way fixed effects", "", "✓", "✓", "✓", "", "", fmt_n(tab3_mod3))
 )
 
+# Table 3 als HTML-Tabelle ausgeben
 kableExtra::kbl(
   table3,
   format = "html",
@@ -1622,6 +1664,7 @@ kableExtra::kbl(
 *Grafik selbst erstellt in Anlehnung an Table 3 aus Gu et. al (2021).*
 
 ```{css, echo=FALSE}
+/* Tabellenkopf von Table 3 zentrieren */
 .table3-original thead th {
   text-align: center !important;
   font-weight: normal !important;
@@ -1631,6 +1674,7 @@ kableExtra::kbl(
 ##### Table 4
 
 ```{r table4_varying_preperiod, results='asis', echo=FALSE}
+# Trendvariablen für verschiedene Pre-Period-Spezifikationen erzeugen
 tab4_data <- BaseSamp_input %>%
   mutate(
     post = as.numeric(wk2open >= 0),
@@ -1648,6 +1692,7 @@ tab4_data <- BaseSamp_input %>%
     wk2open5_post_treat = wkabs^5 * (post == 1) * treat
   )
 
+# Eine Table-4-Spezifikation schätzen
 run_tab4 <- function(data, pre_weeks = 48L, poly_degree = 0L) {
   data_use <- data %>% filter(between(wk2open, -pre_weeks, 47))
   rhs <- c("TP", "treat")
@@ -1673,6 +1718,7 @@ run_tab4 <- function(data, pre_weeks = 48L, poly_degree = 0L) {
   feols(fml, cluster = ~case, data = data_use)
 }
 
+# Modelle mit unterschiedlichen Pre-Periods und Trends schätzen
 tab4_mod1 <- run_tab4(tab4_data, pre_weeks = 12, poly_degree = 0)
 tab4_mod2 <- run_tab4(tab4_data, pre_weeks = 24, poly_degree = 0)
 tab4_mod3 <- run_tab4(tab4_data, pre_weeks = 48, poly_degree = 0)
@@ -1685,6 +1731,7 @@ fmt_coef <- function(m) sprintf("%.3f", coef(m)[["TP"]])
 fmt_se <- function(m) sprintf("(%.3f)", sqrt(vcov(m)[["TP", "TP"]]))
 fmt_n <- function(m) formatC(nobs(m), format = "d", big.mark = ",")
 
+# Ergebnistabelle für Table 4 zusammenbauen
 table4 <- tibble::tibble(
   term = c(
     "Treated × post",
@@ -1702,6 +1749,7 @@ table4 <- tibble::tibble(
   `6` = c(fmt_coef(tab4_mod6), fmt_se(tab4_mod6), "[-48, 47]", "Up to fifth", "", fmt_n(tab4_mod6))
 )
 
+# Table 4 als HTML-Tabelle ausgeben
 kbl(
   table4,
   format = "html",
@@ -1736,6 +1784,7 @@ kbl(
 *Grafik selbst erstellt in Anlehnung an Table 4 aus Gu et. al (2021).*
 
 ```{css, echo=FALSE}
+/* Tabellenkopf von Table 4 zentrieren */
 .table4-original thead th {
   text-align: center !important;
   font-weight: normal !important;
@@ -1907,8 +1956,8 @@ tab5_wild_block_bootstrap <- function(data, group, weights = NULL, n_blocks = NU
   boot_coefs <- boot_numerators / tp_sum_squares
 
   # Das Stata-Skript hängt die Originalschätzung an die 499 Bootstrap-Ziehungen
-  # an, bevor die Perzentile berechnet werden. Das behalten wir hier bei, ohne
-  # eine vorberechnete Bootstrap-Datei einzulesen.
+  # an, bevor die Perzentile berechnet werden. Diese Logik bleibt erhalten,
+  # ohne eine vorberechnete Bootstrap-Datei einzulesen.
   c(boot_coefs, coef(original_model)["TP"])
 }
 
@@ -1983,6 +2032,7 @@ kbl(
 *Grafik selbst erstellt in Anlehnung an Table 5 aus Gu et. al (2021).*
 
 ```{css, echo=FALSE}
+/* Tabellenkopf von Table 5 zentrieren */
 .table5-original thead th {
   text-align: center !important;
   font-weight: normal !important;
@@ -2088,8 +2138,10 @@ p_fig4
 
 ##### Figure 5
 ```{r fig5_data, echo=FALSE}
+# Basissample für die Launch-Time-Subsamples übernehmen
 fig5_base <- BaseSamp_input
 
+# Event-Study für ein Figure-5-Panel schätzen
 fit_fig5_panel <- function(data, wk_min, wk_max) {
   d <- data %>%
     filter(between(wk2open, wk_min, wk_max))
@@ -2141,6 +2193,7 @@ fit_fig5_panel <- function(data, wk_min, wk_max) {
     )
 }
 
+# Drei Subsamples nach Eröffnungszeitpunkt schätzen
 fig5_a_df <- fit_fig5_panel(
   fig5_base %>% filter(opendate <= as.Date("2017-01-31")),
   wk_min = -6,
@@ -2157,6 +2210,7 @@ fig5_c_df <- fit_fig5_panel(
   wk_max = 3
 )
 
+# Figure-5-Panel aus Schätzergebnissen zeichnen
 plot_fig5_panel <- function(df, panel_title, x_breaks, x_limits, y_breaks) {
   y_pad <- 0.005
   y_lims <- range(c(df$ci_low, df$ci_high), na.rm = TRUE) + c(-y_pad, y_pad)
@@ -2176,6 +2230,7 @@ plot_fig5_panel <- function(df, panel_title, x_breaks, x_limits, y_breaks) {
     )
 }
 
+# Einzelpanels für Figure 5 erstellen
 p_fig5_a <- plot_fig5_panel(
   fig5_a_df,
   "Panel A. Lines launched before January 31, 2017",
@@ -2202,6 +2257,7 @@ p_fig5_c <- plot_fig5_panel(
 ```
 
 ```{r fig5_combined, echo=FALSE, fig.width=10, fig.height=7.5, fig.cap='Grafik selbst erstellt in Anlehnung an Figure 5 aus Gu et. al (2021)'}
+# Drei Panels zu einer Abbildung kombinieren
 (
   (p_fig5_a | p_fig5_b) /
   (p_fig5_c | plot_spacer())
@@ -2217,6 +2273,7 @@ p_fig5_c <- plot_fig5_panel(
 Für Figure 6 werden entsprechend der Stata-Replikationsdatei `ReplicaCodes/Fig6.do` drei Datensätze benötigt: `Data/ExtendSample.dta` als Hauptdatensatz sowie `Data/WithAgainstTraffic.dta` und `Data/RushNonrusHours.dta` für die beiden Heterogenitätsgruppen nach Fahrtrichtung und Tageszeit.
 
 ```{r fig6_data_and_estimation, echo=FALSE}
+# Stata-ähnliche Hilfsfunktionen für Indikatoren definieren
 fig6_stata_eq <- function(x, value) {
   as.numeric(!is.na(x) & x == value)
 }
@@ -2233,6 +2290,7 @@ fig6_stata_inrange_to_missing <- function(x, lower) {
   as.numeric(is.na(x) | x >= lower)
 }
 
+# Heterogenitätsindikatoren im ExtendSample erzeugen
 fig6_base <- ExtendSample_input %>%
   mutate(
     Dp_Roadtype12 = Dp * fig6_stata_in(roadtype, c(1, 2)),
@@ -2249,6 +2307,7 @@ fig6_base <- ExtendSample_input %>%
     row_id_fig6 = row_number()
   )
 
+# Tatsächlich genutzte Beobachtungen aus fixest-Modellen rekonstruieren
 fig6_estimation_data <- function(model, data) {
   rows <- seq_len(nrow(data))
 
@@ -2265,6 +2324,7 @@ fig6_estimation_data <- function(model, data) {
   data[rows, , drop = FALSE]
 }
 
+# Koeffizient, Konfidenzintervall und Stauindex für eine Zeile berechnen
 fig6_coef_row <- function(model, term, y_position, ci_var, ci_filter, label, data_for_mean) {
   td <- broom::tidy(model)
   hit <- td %>% filter(term == !!term)
@@ -2426,6 +2486,7 @@ mod_fig6_line_distance <- feols(
   data = fig6_line_distance
 )
 
+# Ergebnisse aller Figure-6-Spezifikationen sammeln
 fig6_results <- bind_rows(
   fig6_coef_row(mod_fig6_all, "Dp", 1, "CI", TRUE, "All", fig6_base_filter),
   fig6_coef_row(mod_fig6_direct, "Dp_MostAffectedLinks", 3, "CI", MostAffectedLinks == 1, "Directly affected", fig6_direct),
@@ -2462,9 +2523,11 @@ fig6_results <- bind_rows(
 ```
 
 ```{r fig6_plot, echo=FALSE, fig.width=7.4, fig.height=7.4, fig.cap='Grafik selbst erstellt in Anlehnung an Figure 6 aus Gu et. al (2021)'}
+# Achsenlabels aus den Ergebniszeilen übernehmen
 fig6_axis_labels <- fig6_results$label
 names(fig6_axis_labels) <- -fig6_results$y_position
 
+# Balkengrafik mit Konfidenzintervallen zeichnen
 p_fig6 <- ggplot(fig6_results, aes(y = -y_position)) +
   geom_rect(aes(xmin = 0, xmax = estimate, ymin = -y_position - 0.39, ymax = -y_position + 0.39), fill = "#6d9996", color = "#2c5673", linewidth = 0.8) +
   geom_segment(aes(x = ci_low, xend = ci_high, yend = -y_position), color = "#9c2f34", linewidth = 0.65) +
@@ -2546,6 +2609,7 @@ fig7_curve_data <- tibble(x = seq(0, 1, length.out = 200)) %>%
 ```
 
 ```{r fig7_plot, echo=FALSE, fig.width=7.2, fig.height=5.7, fig.cap='Grafik selbst erstellt in Anlehnung an Figure 7 aus Gu et. al (2021)'}
+# Theoretische Wohlfahrtsgrafik zeichnen
 p_fig7 <- ggplot() +
   geom_polygon(
     data = fig7_left_area,
@@ -2636,6 +2700,7 @@ p_fig7
 ```
 
 ```{r fig7_save, include=FALSE}
+# Figure 7 als PNG speichern
 ggsave(
   filename = "FertigeGrafiken/Fig7_R.png",
   plot = p_fig7,
