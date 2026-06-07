@@ -25,6 +25,17 @@ library(patchwork)
 library(readr)
 ```
 
+```{r datainput, include=FALSE}
+UrbanTransitReports_input <- read_dta("Data/UrbanTransitReports.dta")
+SubwayLines_input <- read_dta("Data/SubwayLines.dta")
+data_table1_input <- read_dta("Data/data_table1.dta")
+CityChars_input <- read_dta("Data/CityChars.dta")
+BaseSamp_input <- read_dta("Data/BaseSamp.dta")
+ExtendSample_input <- read_dta("Data/ExtendSample.dta")
+WithAgainstTraffic_input <- read_dta("Data/WithAgainstTraffic.dta")
+RushNonrusHours_input <- read_dta("Data/RushNonrusHours.dta")
+```
+
 # Paper
 
 In ihrem Paper *Subways and Road Congestion* untersuchen Yizhen Gu, Chang Jiang, Junfu Zhang und Ben Zou, ob der Ausbau von U-Bahn-Systemen tatsächlich dazu beitragen kann, Straßenverkehr in chinesischen Städten zu entlasten. Die Studie setzt dabei an einem zentralen verkehrsökonomischen Problem an: Viele schnell wachsende Städte leiden unter zunehmendem Stau, gleichzeitig werden U-Bahnen häufig als Lösung zur Reduktion von Verkehrsbelastung betrachtet.
@@ -46,7 +57,7 @@ Die Autoren kommen zu dem Ergebnis, dass neue U-Bahn-Linien den Straßenverkehr 
 
 ```{r DataUrbantransitVorbereiten, echo=FALSE, include = FALSE}
 # Datensatz einlesten
-urban <- read_dta("Data/UrbanTransitReports.dta")
+urban <- UrbanTransitReports_input
 
 # Spaltennamen übersetzen
 urban_en <- urban %>%
@@ -128,7 +139,7 @@ urban_en <- urban_en %>%
 
 ```{r DataSubwayLines, include= FALSE}
 # Datensatz laden
-lines <- read_dta("Data/SubwayLines.dta")
+lines <- SubwayLines_input
 
 # Wie im Original Hong Kong entfernen
 lines_nohk <- lines %>%
@@ -470,7 +481,7 @@ ggsave(
 
 ```{r grafik1_daten}
 
-data_grafik1_monat <- read_dta("Data/data_table1.dta") %>%
+data_grafik1_monat <- data_table1_input %>%
   mutate(
     panel = factor(
       panel,
@@ -733,7 +744,7 @@ stata_quantile <- function(x, probs) {
 ```
 
 ```{r table2_panel_a, include=FALSE}
-table2_city <- read_dta("Data/CityChars.dta") %>%
+table2_city <- CityChars_input %>%
   mutate(pop_million = popx10k / 100)
 
 summarise_city_var <- function(data, variable, digits) {
@@ -812,7 +823,7 @@ table2_n_control <- unique(city_stats$n_cities[city_stats$group == "control citi
 ```
 
 ```{r table2_panel_b, include=FALSE}
-table2_roads <- read_dta("Data/BaseSamp.dta") %>%
+table2_roads <- BaseSamp_input %>%
   filter(between(wk2open, -6, 47)) %>%
   mutate(
     treatment_group = if_else(treat == 1, "treated", "control"),
@@ -1176,7 +1187,7 @@ kable(
 
 ##### Figure 2
 ```{r fig2_data, echo=FALSE}
-base_samp <- read_dta("Data/BaseSamp.dta") %>%
+base_samp <- BaseSamp_input %>%
   filter(between(wk2open, -6, 47))
 
 # Stata Fig2.do baut exakt diese Event-Variablen:
@@ -1299,7 +1310,7 @@ p_fig2_c
 ##### Table 3
 
 ```{r table3_baseline_estimates, results='asis', echo=FALSE}
-tab3_data <- read_dta("Data/BaseSamp.dta") %>%
+tab3_data <- BaseSamp_input %>%
   mutate(
     post = as.numeric(wk2open >= 0),
     TP = treat * post
@@ -1385,7 +1396,7 @@ kableExtra::kbl(
 ##### Table 4
 
 ```{r table4_varying_preperiod, results='asis', echo=FALSE}
-tab4_data <- read_dta("Data/BaseSamp.dta") %>%
+tab4_data <- BaseSamp_input %>%
   mutate(
     post = as.numeric(wk2open >= 0),
     TP = treat * post,
@@ -1501,7 +1512,7 @@ kbl(
 # Für jeden Placebo-Zeitpunkt wird wie in Stata Dp = treat * (wk2open >= i)
 # geschätzt. Der frühere Zwischenschritt über TablesFigures/Fig3_PlaceboWald.dta
 # wird bewusst nicht mehr verwendet.
-fig3_base <- read_dta("Data/BaseSamp.dta") %>%
+fig3_base <- BaseSamp_input %>%
   mutate(
     post = as.numeric(wk2open >= 0)
   )
@@ -1564,7 +1575,7 @@ p_fig3
 ```{r table5_subsamples_launch, results='asis', echo=FALSE}
 # Replikation von ReplicaCodes/Tab5.do
 # Laut Replication README ist BaseSamp.dta der Basissample-Datensatz für die meisten Hauptergebnisse.
-tab5_data <- read_dta("Data/BaseSamp.dta") %>%
+tab5_data <- BaseSamp_input %>%
   mutate(
     post = as.numeric(wk2open >= 0),
     TP = treat * post,
@@ -1746,7 +1757,7 @@ kbl(
 
 ```{r fig4_data, echo=FALSE, include=FALSE}
 # Replikation von ReplicaCodes/Fig4.do
-fig4_base <- read_dta("Data/BaseSamp.dta") %>%
+fig4_base <- BaseSamp_input %>%
   filter(between(wk2open, -48, 47))
 
 # Event-Time-Dummies wie im Stata-Code: Am48-Am2, A0, Ap1-Ap47
@@ -1838,7 +1849,7 @@ p_fig4
 
 ##### Figure 5
 ```{r fig5_data, echo=FALSE}
-fig5_base <- haven::read_dta("Data/BaseSamp.dta")
+fig5_base <- BaseSamp_input
 
 fit_fig5_panel <- function(data, wk_min, wk_max) {
   d <- data %>%
@@ -1983,7 +1994,7 @@ fig6_stata_inrange_to_missing <- function(x, lower) {
   as.numeric(is.na(x) | x >= lower)
 }
 
-fig6_base <- read_dta("Data/ExtendSample.dta") %>%
+fig6_base <- ExtendSample_input %>%
   mutate(
     Dp_Roadtype12 = Dp * fig6_stata_in(roadtype, c(1, 2)),
     Dp_Roadtype3 = Dp * fig6_stata_eq(roadtype, 3),
@@ -2121,7 +2132,7 @@ mod_fig6_roadtype <- feols(
 
 fig6_with_traffic <- fig6_base %>%
   inner_join(
-    read_dta("Data/WithAgainstTraffic.dta") %>%
+    WithAgainstTraffic_input %>%
       select(case, linkid, wk2open, WithTraffic, lnspd_res_WithAgainstTraffic, CI_WithAgainstTraffic),
     by = c("case", "linkid", "wk2open")
   ) %>%
@@ -2142,7 +2153,7 @@ mod_fig6_with_traffic <- feols(
 fig6_rush <- fig6_base %>%
   select(-any_of(c("lnspd_res", "CI_res", "CI", "speed", "lnspd"))) %>%
   inner_join(
-    read_dta("Data/RushNonrusHours.dta") %>%
+    RushNonrusHours_input %>%
       select(case, linkid, wk2open, rushhour, lnspd_res, CI),
     by = c("case", "linkid", "wk2open")
   ) %>%
