@@ -25,6 +25,17 @@ library(patchwork)
 library(readr)
 ```
 
+# Paper
+
+In ihrem Paper *Subways and Road Congestion* untersuchen Yizhen Gu, Chang Jiang, Junfu Zhang und Ben Zou, ob der Ausbau von U-Bahn-Systemen tatsächlich dazu beitragen kann, Straßenverkehr in chinesischen Städten zu entlasten. Die Studie setzt dabei an einem zentralen verkehrsökonomischen Problem an: Viele schnell wachsende Städte leiden unter zunehmendem Stau, gleichzeitig werden U-Bahnen häufig als Lösung zur Reduktion von Verkehrsbelastung betrachtet.
+
+Besonders relevant ist der chinesische Kontext, da China in den vergangenen Jahren einen massiven Ausbau städtischer U-Bahn-Netze erlebt hat. Zwischen 2001 und 2017 stieg die Gesamtlänge der U-Bahn-Linien in China stark an, während gleichzeitig Bevölkerung, Autobesitz und Verkehrsaufkommen in vielen Großstädten zunahmen. Dadurch entsteht ein geeigneter empirischer Rahmen, um den Effekt neuer U-Bahn-Linien auf den Straßenverkehr zu untersuchen.
+
+Für ihre Analyse nutzen die Autoren Daten zu 45 neu eröffneten U-Bahn-Linien in 25 chinesischen Städten im Zeitraum von August 2016 bis Dezember 2017. Diese Informationen kombinieren sie mit hochfrequenten Verkehrsdaten von Baidu Maps, die stündliche Geschwindigkeitsmessungen auf Ebene einzelner Straßenabschnitte enthalten. Dadurch können die Autoren sehr genau beobachten, wie sich die Fahrgeschwindigkeit auf Straßen in der Nähe neuer U-Bahn-Linien vor und nach deren Eröffnung verändert.
+
+Methodisch basiert die Studie auf einem Difference-in-Differences-Ansatz. Dabei werden Straßenabschnitte, die direkt von einer neuen U-Bahn-Linie betroffen sein könnten, mit Kontrollstraßen in Städten verglichen, in denen im Untersuchungszeitraum keine neue U-Bahn-Linie eröffnet wurde. Ziel ist es, den kausalen Effekt der U-Bahn-Eröffnung auf die Verkehrsgeschwindigkeit zu isolieren und allgemeine zeitliche Entwicklungen oder saisonale Muster möglichst herauszurechnen.
+
+Die Autoren kommen zu dem Ergebnis, dass neue U-Bahn-Linien den Straßenverkehr zumindest kurzfristig messbar entlasten. Im ersten Jahr nach der Eröffnung steigt die Geschwindigkeit auf direkt betroffenen Straßen während der Stoßzeiten um durchschnittlich etwa vier Prozent. Der Effekt ist besonders ausgeprägt auf zuvor stark überlasteten Straßen und nimmt mit zunehmender Entfernung zur neuen U-Bahn-Linie ab. Ergänzende Analysen aus Beijing deuten außerdem darauf hin, dass eine bessere U-Bahn-Anbindung mit mehr U-Bahn-Fahrten sowie weniger Bus- und Autofahrten verbunden ist.
 
 
 
@@ -223,7 +234,7 @@ plot_df <- fig1_df %>%
 
 ```
 
-```{r plotfig1, echo=FALSE}
+```{r plotfig1, echo=FALSE, fig.cap='Grafik selbst erstellt in Anlehnung an Figure 1 aus Gu et. al (2021)'}
 # ggplot benötigt einen skalierungsfaktor für die rechte achse
 scale_factor <- 3.2
 
@@ -552,7 +563,7 @@ month_breaks_grafik1 <- c(1:11, 13.0, 15.4)
 ```
 
 
-```{r grafik1, fig.width=12, fig.height=9.5, out.width="73%", dpi=300, dev="png", fig.align="left"}
+```{r grafik1, fig.width=12, fig.height=9.5, out.width="73%", dpi=300, dev="png", fig.align="left", fig.cap='Grafik selbst erstellt auf Basis von Table 1 aus Gu et. al (2021)'}
 plot_data_grafik1_monat <- ggplot(
   data_grafik1_monat_cluster,
   aes(x = x_cluster, y = y_plot, fill = panel, shape = line_status)
@@ -1260,19 +1271,19 @@ p_fig2_b <- plot_fig2_panel(fig2_b_df, "Panel B. Two-way fixed effects, not acco
 p_fig2_c <- plot_fig2_panel(fig2_c_df, "Panel C. Two-way fixed effects, accounting for seasonality")
 ```
 
-```{r fig2_panel_a, echo=FALSE, fig.width=7, fig.height=4.5}
+```{r fig2_panel_a, echo=FALSE, fig.width=7, fig.height=4.5, fig.cap='Grafik selbst erstellt in Anlehnung an Figure 2 aus Gu et. al (2021)'}
 p_fig2_a
 ```
 
-```{r fig2_panel_b, echo=FALSE, fig.width=7, fig.height=4.5}
+```{r fig2_panel_b, echo=FALSE, fig.width=7, fig.height=4.5, fig.cap='Grafik selbst erstellt in Anlehnung an Figure 2 aus Gu et. al (2021)'}
 p_fig2_b
 ```
 
-```{r fig2_panel_c, echo=FALSE, fig.width=7, fig.height=4.5}
+```{r fig2_panel_c, echo=FALSE, fig.width=7, fig.height=4.5, fig.cap='Grafik selbst erstellt in Anlehnung an Figure 2 aus Gu et. al (2021)'}
 p_fig2_c
 ```
 
-```{r fig2_combined, echo=FALSE, fig.width=10, fig.height=7.5}
+```{r fig2_combined, echo=FALSE, fig.width=10, fig.height=7.5, fig.cap='Grafik selbst erstellt in Anlehnung an Figure 2 aus Gu et. al (2021)'}
 
 
 (
@@ -1492,7 +1503,7 @@ fig3_df <- read_dta("TablesFigures/Fig3_PlaceboWald.dta") %>%
   filter(between(wk2open, -47, 47))
 ```
 
-```{r fig3_plot, echo=FALSE}
+```{r fig3_plot, echo=FALSE, fig.cap='Grafik selbst erstellt in Anlehnung an Figure 3 aus Gu et. al (2021)'}
 # Darstellung analog zum Stata-Graphen in Fig3.do
 p_fig3 <- ggplot(fig3_df, aes(x = wk2open, y = wald_stat)) +
   geom_hline(yintercept = 1:5, color = "#B0B4B8", linewidth = 0.8) +
@@ -1696,7 +1707,7 @@ fig4_df <- tibble(
 )
 ```
 
-```{r fig4_plot, echo=FALSE}
+```{r fig4_plot, echo=FALSE, fig.cap='Grafik selbst erstellt in Anlehnung an Figure 4 aus Gu et. al (2021)'}
 # Darstellung analog zu Figure 4 (Longer Pre-Treatment Periods)
 p_fig4 <- ggplot(fig4_df, aes(x = wk2open, y = coef)) +
   geom_hline(yintercept = c(-0.05, 0, 0.05, 0.10), color = "#B0B4B8", linewidth = 0.6) +
@@ -1838,7 +1849,7 @@ p_fig5_c <- plot_fig5_panel(
 )
 ```
 
-```{r fig5_combined, echo=FALSE, fig.width=10, fig.height=7.5}
+```{r fig5_combined, echo=FALSE, fig.width=10, fig.height=7.5, fig.cap='Grafik selbst erstellt in Anlehnung an Figure 5 aus Gu et. al (2021)'}
 (
   (p_fig5_a | p_fig5_b) /
   (p_fig5_c | plot_spacer())
@@ -2098,7 +2109,7 @@ fig6_results <- bind_rows(
   )
 ```
 
-```{r fig6_plot, echo=FALSE, fig.width=7.4, fig.height=7.4}
+```{r fig6_plot, echo=FALSE, fig.width=7.4, fig.height=7.4, fig.cap='Grafik selbst erstellt in Anlehnung an Figure 6 aus Gu et. al (2021)'}
 fig6_axis_labels <- fig6_results$label
 names(fig6_axis_labels) <- -fig6_results$y_position
 
@@ -2123,7 +2134,7 @@ p_fig6 <- ggplot(fig6_results, aes(y = -y_position)) +
     limits = c(-0.015, 0.153),
     expand = expansion(mult = c(0, 0))
   ) +
-  labs(x = "Coefficient", y = NULL, caption = "Figure 6. Heterogeneous Effects by Road Segment Characteristics") +
+  labs(x = "Coefficient", y = NULL) +
   theme_minimal(base_family = "serif", base_size = 11) +
   theme(
     panel.grid.major.y = element_line(color = "#d2d2d2", linewidth = 0.45),
@@ -2182,7 +2193,7 @@ fig7_curve_data <- tibble(x = seq(0, 1, length.out = 200)) %>%
   )
 ```
 
-```{r fig7_plot, echo=FALSE, fig.width=7.2, fig.height=5.7}
+```{r fig7_plot, echo=FALSE, fig.width=7.2, fig.height=5.7, fig.cap='Grafik selbst erstellt in Anlehnung an Figure 7 aus Gu et. al (2021)'}
 p_fig7 <- ggplot() +
   geom_polygon(
     data = fig7_left_area,
@@ -2260,8 +2271,7 @@ p_fig7 <- ggplot() +
   
   labs(
     x = NULL,
-    y = NULL,
-    caption = "Figure 7. Illustration of the Welfare Impact"
+    y = NULL
   ) +
   coord_cartesian(xlim = c(0, 1), ylim = c(0, 1), clip = "off") +
   theme_void(base_family = "serif") +
