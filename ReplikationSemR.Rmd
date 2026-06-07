@@ -48,8 +48,217 @@ Methodisch basiert die Studie auf einem Difference-in-Differences-Ansatz. Dabei 
 
 Die Autoren kommen zu dem Ergebnis, dass neue U-Bahn-Linien den Straßenverkehr zumindest kurzfristig messbar entlasten. Im ersten Jahr nach der Eröffnung steigt die Geschwindigkeit auf direkt betroffenen Straßen während der Stoßzeiten um durchschnittlich etwa vier Prozent. Der Effekt ist besonders ausgeprägt auf zuvor stark überlasteten Straßen und nimmt mit zunehmender Entfernung zur neuen U-Bahn-Linie ab. Ergänzende Analysen aus Beijing deuten außerdem darauf hin, dass eine bessere U-Bahn-Anbindung mit mehr U-Bahn-Fahrten sowie weniger Bus- und Autofahrten verbunden ist.
 
+# Daten
 
+Die Replikation arbeitet mit mehreren bereits aufbereiteten Stata-Datensätzen. Die folgenden Übersichten werden direkt aus den eingelesenen R-Objekten erzeugt und aktualisieren sich daher automatisch, wenn sich die zugrunde liegenden `.dta`-Dateien ändern. Inhaltlich lassen sich die Dateien in stadt- und U-Bahn-bezogene Hintergrunddaten, Basissamples auf Ebene von Straßenabschnitt und Woche sowie ergänzende Samples für Heterogenitätsanalysen einteilen.
 
+```{r daten-uebersicht, echo=FALSE}
+format_int <- function(x) {
+  format(x, big.mark = ".", decimal.mark = ",", scientific = FALSE, trim = TRUE)
+}
+
+format_range <- function(x) {
+  x <- x[!is.na(x)]
+
+  if (length(x) == 0) {
+    return("--")
+  }
+
+  paste0(format(min(x), scientific = FALSE, trim = TRUE), "--", format(max(x), scientific = FALSE, trim = TRUE))
+}
+
+count_distinct <- function(data, variable) {
+  if (!variable %in% names(data)) {
+    return("--")
+  }
+
+  format_int(n_distinct(data[[variable]], na.rm = TRUE))
+}
+
+range_variable <- function(data, variable) {
+  if (!variable %in% names(data)) {
+    return("--")
+  }
+
+  format_range(data[[variable]])
+}
+
+dataset_overview <- tibble::tibble(
+  Datensatz = c(
+    "Data/UrbanTransitReports.dta",
+    "Data/SubwayLines.dta",
+    "Data/CityChars.dta",
+    "Data/BaseSamp.dta",
+    "Data/ExtendSample.dta",
+    "Data/WithAgainstTraffic.dta",
+    "Data/RushNonrusHours.dta"
+  ),
+  Datenobjekt = list(
+    UrbanTransitReports_input,
+    SubwayLines_input,
+    CityChars_input,
+    BaseSamp_input,
+    ExtendSample_input,
+    WithAgainstTraffic_input,
+    RushNonrusHours_input
+  ),
+  `Ebene / Beobachtungseinheit` = c(
+    "Stadt-Jahr",
+    "U-Bahn-Linie",
+    "Stadt",
+    "Straßenabschnitt-Woche relativ zur Linieneröffnung",
+    "Straßenabschnitt-Woche relativ zur Linieneröffnung",
+    "Straßenabschnitt-Woche-Rush-Hour-Richtung",
+    "Straßenabschnitt-Woche-Zeitfenster"
+  ),
+  `Aus den Daten berechnete Kennzahlen` = c(
+    paste0(
+      count_distinct(UrbanTransitReports_input, "城市"), " Städte; Jahre ",
+      range_variable(UrbanTransitReports_input, "年份")
+    ),
+    paste0(
+      count_distinct(SubwayLines_input, "linename"), " Linien; ",
+      count_distinct(SubwayLines_input, "city"), " Städte; Eröffnungsjahre ",
+      range_variable(SubwayLines_input, "openyear")
+    ),
+    paste0(
+      count_distinct(CityChars_input, "cityname"), " Städte; ",
+      format_int(sum(CityChars_input$treat == 1, na.rm = TRUE)), " treated; ",
+      format_int(sum(CityChars_input$treat == 0, na.rm = TRUE)), " control"
+    ),
+    paste0(
+      count_distinct(BaseSamp_input, "linkid"), " Straßenabschnitte; ",
+      count_distinct(BaseSamp_input, "case"), " Vergleichsfälle; Wochen ",
+      range_variable(BaseSamp_input, "wk2open")
+    ),
+    paste0(
+      count_distinct(ExtendSample_input, "linkid"), " Straßenabschnitte; ",
+      count_distinct(ExtendSample_input, "case"), " Vergleichsfälle; Wochen ",
+      range_variable(ExtendSample_input, "wk2open")
+    ),
+    paste0(
+      count_distinct(WithAgainstTraffic_input, "linkid"), " Straßenabschnitte; ",
+      count_distinct(WithAgainstTraffic_input, "case"), " Vergleichsfälle; Wochen ",
+      range_variable(WithAgainstTraffic_input, "wk2open")
+    ),
+    paste0(
+      count_distinct(RushNonrusHours_input, "linkid"), " Straßenabschnitte; ",
+      count_distinct(RushNonrusHours_input, "case"), " Vergleichsfälle; Wochen ",
+      range_variable(RushNonrusHours_input, "wk2open")
+    )
+  ),
+  `Rolle in der Replikation` = c(
+    "Hintergrunddaten zu öffentlichem Verkehr, Stadtentwicklung und U-Bahn-Ausbau; Grundlage für Figure 1.",
+    "Linieninformationen wie Stadt, Linienname, Länge, Stationen und Eröffnungsdatum; ergänzt Figure 1 um die kumulierte Streckenlänge.",
+    "Stadtmerkmale für deskriptive Statistiken und Kontrollvariablen.",
+    "Zentrales Basissample für die Difference-in-Differences-Hauptergebnisse.",
+    "Erweitertes Sample für räumliche Heterogenität, Entfernungen und Richtungsmaße.",
+    "Ergänzung zu Figure 6 für die Unterscheidung zwischen Fahrten mit und gegen die typische Pendelrichtung.",
+    "Ergänzung zu Figure 6 für den Vergleich zwischen Stoßzeiten und Nicht-Stoßzeiten."
+  )
+) %>%
+  mutate(
+    Beobachtungen = map_chr(Datenobjekt, ~ format_int(nrow(.x))),
+    Variablen = map_chr(Datenobjekt, ~ format_int(ncol(.x)))
+  ) %>%
+  select(
+    Datensatz,
+    `Ebene / Beobachtungseinheit`,
+    Beobachtungen,
+    Variablen,
+    `Aus den Daten berechnete Kennzahlen`,
+    `Rolle in der Replikation`
+  )
+
+dataset_overview %>%
+  kable(
+    caption = "Automatisch aus den eingelesenen Datensätzen erstellte Übersicht",
+    align = c("l", "l", "r", "r", "l", "l")
+  ) %>%
+  kable_styling(full_width = TRUE, bootstrap_options = c("striped", "hover", "condensed"))
+```
+
+Die erste Übersicht zeigt Umfang und Analyseebene der einzelnen Dateien. Für die Interpretation der Replikation ist außerdem wichtig, welche Variablen in den Datensätzen tatsächlich vorhanden sind und welche Rolle sie in den späteren Abbildungen und Tabellen spielen. Die folgende Tabelle wird ebenfalls in R erzeugt; sie kombiniert ausgewählte Variablen aus den Datensätzen mit den in den `.dta`-Dateien gespeicherten Variablenlabels.
+
+```{r daten-variablen-uebersicht, echo=FALSE}
+variable_label <- function(data, variable) {
+  label <- attr(data[[variable]], "label")
+
+  if (is.null(label) || is.na(label) || label == "") {
+    return("kein Label in der Datei")
+  }
+
+  as.character(label)
+}
+
+variable_type <- function(data, variable) {
+  class(data[[variable]])[1]
+}
+
+important_variables <- tibble::tibble(
+  Datensatz = c(
+    "UrbanTransitReports.dta",
+    "SubwayLines.dta",
+    "CityChars.dta",
+    "BaseSamp.dta",
+    "ExtendSample.dta",
+    "WithAgainstTraffic.dta",
+    "RushNonrusHours.dta"
+  ),
+  Datenobjekt = list(
+    UrbanTransitReports_input,
+    SubwayLines_input,
+    CityChars_input,
+    BaseSamp_input,
+    ExtendSample_input,
+    WithAgainstTraffic_input,
+    RushNonrusHours_input
+  ),
+  Variablen = list(
+    c("城市", "年份", "轨道交通运营线路长度公里", "轨道交通客运量万人次", "民用汽车拥有量万辆", "GDP", "城市人均GDP"),
+    c("linename", "city", "lengthkm", "stations", "opendate", "openyear"),
+    c("cityname", "treat", "popx10k", "gdpx10k", "gdppc", "avgwage"),
+    c("linkid", "wk2open", "lnspd_res", "CI", "speed", "treat", "case", "roadtype"),
+    c("linkid", "wk2open", "lnspd_res", "CI", "link2_nearest_treat_line_km", "same_direct", "MostAffectedLinks", "MoreCongested", "Dp", "dist2stn"),
+    c("linkid", "wk2open", "case", "morning", "CI_WithAgainstTraffic", "lnspd_res_WithAgainstTraffic", "WithTraffic"),
+    c("linkid", "wk2open", "rushhour", "lnspd_res", "CI", "treat", "case")
+  ),
+  `Inhaltliche Bedeutung` = c(
+    "Langfristige Stadtentwicklung, öffentlicher Verkehr, U-Bahn-Ausbau und wirtschaftliche Rahmendaten.",
+    "Einzelne U-Bahn-Linien mit Stadt, Länge, Stationszahl und Eröffnungsdatum.",
+    "Stadtcharakteristika zum Vergleich von treated und control cities.",
+    "Basissample für die Hauptschätzungen auf Straßenabschnitt-Wochen-Ebene.",
+    "Erweitertes Sample für Heterogenität nach Distanz, Richtung und Ausgangsstauniveau.",
+    "Rush-Hour-Sample für die Unterscheidung zwischen Pendelrichtung und Gegenrichtung.",
+    "Sample für den Vergleich von Stoßzeiten und Nicht-Stoßzeiten."
+  )
+)
+
+important_variables %>%
+  mutate(
+    `Ausgewählte Variablen` = map2_chr(
+      Datenobjekt,
+      Variablen,
+      ~ paste(.y, collapse = ", ")
+    ),
+    `Variablenlabels aus .dta` = map2_chr(
+      Datenobjekt,
+      Variablen,
+      ~ paste0(.y, " (", map_chr(.y, function(variable) variable_label(.x, variable)), ")", collapse = "; ")
+    ),
+    `Variablentypen aus R` = map2_chr(
+      Datenobjekt,
+      Variablen,
+      ~ paste0(.y, ": ", map_chr(.y, function(variable) variable_type(.x, variable)), collapse = "; ")
+    )
+  ) %>%
+  select(Datensatz, `Ausgewählte Variablen`, `Variablenlabels aus .dta`, `Variablentypen aus R`, `Inhaltliche Bedeutung`) %>%
+  kable(
+    caption = "Aus den Datensätzen erzeugte Variablenübersicht",
+    align = c("l", "l", "l", "l", "l")
+  ) %>%
+  kable_styling(full_width = TRUE, bootstrap_options = c("striped", "hover", "condensed"))
+```
 
 
 
