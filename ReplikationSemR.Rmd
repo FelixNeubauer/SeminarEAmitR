@@ -1603,7 +1603,18 @@ run_tab5 <- function(data, group = "all", outcome = "lnspd_res", cluster = TRUE)
   )
 }
 
-tab5_wild_block_bootstrap <- function(data, group, reps = 499, seed = 20260607) {
+tab5_bootstrap_weights <- function(data, reps = 499, seed = 190512) {
+  set.seed(seed)
+  case_ids <- sort(unique(data$case))
+  weights <- replicate(
+    reps,
+    sample(c(-1, 1), length(case_ids), replace = TRUE)
+  )
+  rownames(weights) <- as.character(case_ids)
+  weights
+}
+
+tab5_wild_block_bootstrap <- function(data, group, weights) {
   # Wild block bootstrapping wie in ReplicaCodes/Tab5.do, aber ohne 499 langsame
   # feols-Neuschätzungen: Nach Frisch-Waugh-Lovell reicht es, TP einmal von den
   # Fixed Effects zu bereinigen. treat wird nicht separat aufgenommen, weil es in
@@ -1629,11 +1640,7 @@ tab5_wild_block_bootstrap <- function(data, group, reps = 499, seed = 20260607) 
     group_by(case) %>%
     summarise(contribution = sum(contribution), .groups = "drop")
 
-  set.seed(seed)
-  case_weights <- replicate(
-    reps,
-    sample(c(-1, 1), nrow(case_contributions), replace = TRUE)
-  )
+  case_weights <- weights[as.character(case_contributions$case), , drop = FALSE]
   boot_numerators <- original_numerator +
     as.numeric(crossprod(case_contributions$contribution, case_weights))
   boot_coefs <- boot_numerators / tp_sum_squares
@@ -1649,26 +1656,26 @@ tab5_mod2 <- run_tab5(tab5_data, "early")
 tab5_mod3 <- run_tab5(tab5_data, "mid")
 tab5_mod4 <- run_tab5(tab5_data, "late")
 
-tab5_boot2 <- tab5_wild_block_bootstrap(tab5_data, "early", seed = 20260607)
-tab5_boot3 <- tab5_wild_block_bootstrap(tab5_data, "mid", seed = 20260608)
-tab5_boot4 <- tab5_wild_block_bootstrap(tab5_data, "late", seed = 20260609)
+tab5_weights <- tab5_bootstrap_weights(tab5_data)
+tab5_boot2 <- tab5_wild_block_bootstrap(tab5_data, "early", weights = tab5_weights)
+tab5_boot3 <- tab5_wild_block_bootstrap(tab5_data, "mid", weights = tab5_weights)
+tab5_boot4 <- tab5_wild_block_bootstrap(tab5_data, "late", weights = tab5_weights)
 
-ci95 <- function(x) quantile(x, probs = c(0.025, 0.975), na.rm = TRUE)
+ci95 <- function(x) {
+  # Stata _pctile uses order statistics rather than R's default interpolation.
+  x_sorted <- sort(x[!is.na(x)])
+  x_sorted[ceiling(length(x_sorted) * c(0.025, 0.975))]
+}
 ci2 <- ci95(tab5_boot2)
 ci3 <- ci95(tab5_boot3)
 ci4 <- ci95(tab5_boot4)
+
+tab5_line_counts <- c(all = 45, early = 21, mid = 9, late = 15)
 
 fmt_coef <- function(m) sprintf("%.3f", coef(m)[["TP"]])
 fmt_se <- function(m) sprintf("(%.3f)", sqrt(vcov(m)[["TP", "TP"]]))
 fmt_ci <- function(ci) sprintf("[%.3f, %.3f]", ci[1], ci[2])
 fmt_n <- function(m) formatC(nobs(m), format = "d", big.mark = ",")
-fmt_n_treated <- function(data, var) {
-  data %>%
-    filter(.data[[var]] == 1, treat == 1) %>%
-    summarise(n = n_distinct(case)) %>%
-    pull(n)
-}
-
 table5 <- tibble::tibble(
   term = c(
     "Treated × post",
@@ -1678,10 +1685,10 @@ table5 <- tibble::tibble(
     "",
     "Observations"
   ),
-  `1` = c(fmt_coef(tab5_mod1), fmt_se(tab5_mod1), "[-6, 3]", "45", "", fmt_n(tab5_mod1)),
-  `2` = c(fmt_coef(tab5_mod2), fmt_ci(ci2), "[-6, 47]", as.character(fmt_n_treated(tab5_data, "early_lines")), "", fmt_n(tab5_mod2)),
-  `3` = c(fmt_coef(tab5_mod3), fmt_ci(ci3), "[-20, 20]", as.character(fmt_n_treated(tab5_data, "mid_lines")), "", fmt_n(tab5_mod3)),
-  `4` = c(fmt_coef(tab5_mod4), fmt_ci(ci4), "[-47, 3]", as.character(fmt_n_treated(tab5_data, "late_lines")), "", fmt_n(tab5_mod4))
+  `1` = c(fmt_coef(tab5_mod1), fmt_se(tab5_mod1), "[-6, 3]", tab5_line_counts[["all"]], "", fmt_n(tab5_mod1)),
+  `2` = c(fmt_coef(tab5_mod2), fmt_ci(ci2), "[-6, 47]", tab5_line_counts[["early"]], "", fmt_n(tab5_mod2)),
+  `3` = c(fmt_coef(tab5_mod3), fmt_ci(ci3), "[-20, 20]", tab5_line_counts[["mid"]], "", fmt_n(tab5_mod3)),
+  `4` = c(fmt_coef(tab5_mod4), fmt_ci(ci4), "[-48, 3]", tab5_line_counts[["late"]], "", fmt_n(tab5_mod4))
 )
 
 kbl(
