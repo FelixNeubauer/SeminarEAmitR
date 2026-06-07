@@ -1573,19 +1573,62 @@ tab5_data <- read_dta("Data/BaseSamp.dta") %>%
     late_lines = as.numeric(opendate > as.Date("2017-11-30"))
   )
 
-run_tab5 <- function(data, group = "all") {
-  data_use <- switch(
+tab5_subset <- function(data, group = "all") {
+  switch(
     group,
     all = data %>% filter(between(wk2open, -6, 3)),
     early = data %>% filter(early_lines == 1, between(wk2open, -6, 47)),
     mid = data %>% filter(mid_lines == 1, between(wk2open, -20, 20)),
     late = data %>% filter(late_lines == 1, between(wk2open, -47, 3))
   )
+}
+
+estimate_tab5 <- function(data_use, outcome = "lnspd_res", cluster = TRUE) {
+  tab5_formula <- as.formula(
+    paste0(outcome, " ~ TP + treat | linkid + case_wk2open + yrwk[lnpop] + yrwk[lngdppc]")
+  )
+
   feols(
-    lnspd_res ~ TP + treat | linkid + case_wk2open + yrwk[lnpop] + yrwk[lngdppc],
-    cluster = ~case,
+    tab5_formula,
+    cluster = if (cluster) ~case else NULL,
     data = data_use
   )
+}
+
+run_tab5 <- function(data, group = "all", outcome = "lnspd_res", cluster = TRUE) {
+  estimate_tab5(
+    tab5_subset(data, group),
+    outcome = outcome,
+    cluster = cluster
+  )
+}
+
+tab5_wild_block_bootstrap <- function(data, group, reps = 499, seed = 20260607) {
+  # Wild block bootstrapping wie in ReplicaCodes/Tab5.do:
+  # Ein Rademacher-Gewicht (+1/-1) wird auf case-Ebene gezogen und auf die
+  # Residuen der Ausgangsschätzung angewendet. Anschließend wird das Modell
+  # mit dem Pseudo-Outcome neu geschätzt.
+  original_model <- run_tab5(data, group)
+  data_use <- tab5_subset(data, group)
+  fitted_values <- fitted(original_model)
+  residual_values <- resid(original_model)
+  case_ids <- unique(data_use$case)
+
+  set.seed(seed)
+  boot_coefs <- map_dbl(seq_len(reps), function(i) {
+    case_weights <- sample(c(-1, 1), length(case_ids), replace = TRUE)
+    names(case_weights) <- as.character(case_ids)
+
+    boot_data <- data_use %>%
+      mutate(y_boot = fitted_values + residual_values * case_weights[as.character(case)])
+
+    coef(estimate_tab5(boot_data, outcome = "y_boot", cluster = FALSE))["TP"]
+  })
+
+  # Das Stata-Skript hängt die Originalschätzung an die 499 Bootstrap-Ziehungen
+  # an, bevor die Perzentile berechnet werden. Das behalten wir hier bei, ohne
+  # eine vorberechnete Bootstrap-Datei einzulesen.
+  c(boot_coefs, coef(original_model)["TP"])
 }
 
 tab5_mod1 <- run_tab5(tab5_data, "all")
@@ -1593,11 +1636,14 @@ tab5_mod2 <- run_tab5(tab5_data, "early")
 tab5_mod3 <- run_tab5(tab5_data, "mid")
 tab5_mod4 <- run_tab5(tab5_data, "late")
 
-tab5_bstrp <- read_dta("TablesFigures/Tab5_Bstrp.dta")
+tab5_boot2 <- tab5_wild_block_bootstrap(tab5_data, "early", seed = 20260607)
+tab5_boot3 <- tab5_wild_block_bootstrap(tab5_data, "mid", seed = 20260608)
+tab5_boot4 <- tab5_wild_block_bootstrap(tab5_data, "late", seed = 20260609)
+
 ci95 <- function(x) quantile(x, probs = c(0.025, 0.975), na.rm = TRUE)
-ci2 <- ci95(tab5_bstrp$Col2_1)
-ci3 <- ci95(tab5_bstrp$Col3_1)
-ci4 <- ci95(tab5_bstrp$Col4_1)
+ci2 <- ci95(tab5_boot2)
+ci3 <- ci95(tab5_boot3)
+ci4 <- ci95(tab5_boot4)
 
 fmt_coef <- function(m) sprintf("%.3f", coef(m)[["TP"]])
 fmt_se <- function(m) sprintf("(%.3f)", sqrt(vcov(m)[["TP", "TP"]]))
