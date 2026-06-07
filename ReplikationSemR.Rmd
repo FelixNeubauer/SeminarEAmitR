@@ -1604,26 +1604,39 @@ run_tab5 <- function(data, group = "all", outcome = "lnspd_res", cluster = TRUE)
 }
 
 tab5_wild_block_bootstrap <- function(data, group, reps = 499, seed = 20260607) {
-  # Wild block bootstrapping wie in ReplicaCodes/Tab5.do:
-  # Ein Rademacher-Gewicht (+1/-1) wird auf case-Ebene gezogen und auf die
-  # Residuen der Ausgangsschätzung angewendet. Anschließend wird das Modell
-  # mit dem Pseudo-Outcome neu geschätzt.
-  original_model <- run_tab5(data, group)
+  # Wild block bootstrapping wie in ReplicaCodes/Tab5.do, aber ohne 499 langsame
+  # feols-Neuschätzungen: Nach Frisch-Waugh-Lovell reicht es, TP einmal von den
+  # übrigen Regressoren und Fixed Effects zu bereinigen. Die Bootstrap-Koeffizienten
+  # lassen sich dann direkt aus den case-geblockten Residuen berechnen.
   data_use <- tab5_subset(data, group)
+  original_model <- estimate_tab5(data_use, cluster = FALSE)
+  tp_partial_model <- feols(
+    TP ~ treat | linkid + case_wk2open + yrwk[lnpop] + yrwk[lngdppc],
+    data = data_use
+  )
+
+  tp_residualized <- resid(tp_partial_model)
   fitted_values <- fitted(original_model)
   residual_values <- resid(original_model)
-  case_ids <- unique(data_use$case)
+  stopifnot(length(tp_residualized) == nrow(data_use))
+
+  tp_sum_squares <- sum(tp_residualized^2)
+  original_numerator <- sum(tp_residualized * fitted_values)
+  case_contributions <- tibble(
+    case = data_use$case,
+    contribution = tp_residualized * residual_values
+  ) %>%
+    group_by(case) %>%
+    summarise(contribution = sum(contribution), .groups = "drop")
 
   set.seed(seed)
-  boot_coefs <- map_dbl(seq_len(reps), function(i) {
-    case_weights <- sample(c(-1, 1), length(case_ids), replace = TRUE)
-    names(case_weights) <- as.character(case_ids)
-
-    boot_data <- data_use %>%
-      mutate(y_boot = fitted_values + residual_values * case_weights[as.character(case)])
-
-    coef(estimate_tab5(boot_data, outcome = "y_boot", cluster = FALSE))["TP"]
-  })
+  case_weights <- replicate(
+    reps,
+    sample(c(-1, 1), nrow(case_contributions), replace = TRUE)
+  )
+  boot_numerators <- original_numerator +
+    as.numeric(crossprod(case_contributions$contribution, case_weights))
+  boot_coefs <- boot_numerators / tp_sum_squares
 
   # Das Stata-Skript hängt die Originalschätzung an die 499 Bootstrap-Ziehungen
   # an, bevor die Perzentile berechnet werden. Das behalten wir hier bei, ohne
