@@ -7,6 +7,44 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE, warnings = FALSE, messages = FALSE)
+
+format_int <- function(x) {
+  format(x, big.mark = ".", decimal.mark = ",", scientific = FALSE, trim = TRUE)
+}
+
+format_num <- function(x, digits = 2) {
+  format(round(x, digits), big.mark = ".", decimal.mark = ",", scientific = FALSE, trim = TRUE)
+}
+
+format_range <- function(x) {
+  x <- x[!is.na(x)]
+
+  if (length(x) == 0) {
+    return("--")
+  }
+
+  paste0(format(min(x), scientific = FALSE, trim = TRUE), "--", format(max(x), scientific = FALSE, trim = TRUE))
+}
+
+count_distinct <- function(data, variable) {
+  if (!variable %in% names(data)) {
+    return("--")
+  }
+
+  format_int(dplyr::n_distinct(data[[variable]], na.rm = TRUE))
+}
+
+range_variable <- function(data, variable) {
+  if (!variable %in% names(data)) {
+    return("--")
+  }
+
+  format_range(data[[variable]])
+}
+
+share_percent <- function(x) {
+  format_num(mean(x, na.rm = TRUE) * 100, 1)
+}
 ```
 
 ```{r libraries, include=FALSE}
@@ -52,45 +90,7 @@ Die Autoren kommen zu dem Ergebnis, dass neue U-Bahn-Linien den Straßenverkehr 
 
 Der folgende Abschnitt orientiert sich am Stil einer kurzen Datendokumentation: Zuerst wird erklärt, welche Rolle die einzelnen Dateien in der Replikation spielen; anschließend werden aus den tatsächlich eingelesenen `.dta`-Dateien kompakte Übersichten berechnet. Dadurch sind die Tabellen nicht händisch abgetippt, sondern werden beim Rendern des Dokuments direkt aus den Daten erzeugt.
 
-```{r daten-hilfsfunktionen, echo=FALSE}
-format_int <- function(x) {
-  format(x, big.mark = ".", decimal.mark = ",", scientific = FALSE, trim = TRUE)
-}
 
-format_num <- function(x, digits = 2) {
-  format(round(x, digits), big.mark = ".", decimal.mark = ",", scientific = FALSE, trim = TRUE)
-}
-
-format_range <- function(x) {
-  x <- x[!is.na(x)]
-
-  if (length(x) == 0) {
-    return("--")
-  }
-
-  paste0(format(min(x), scientific = FALSE, trim = TRUE), "--", format(max(x), scientific = FALSE, trim = TRUE))
-}
-
-count_distinct <- function(data, variable) {
-  if (!variable %in% names(data)) {
-    return("--")
-  }
-
-  format_int(n_distinct(data[[variable]], na.rm = TRUE))
-}
-
-range_variable <- function(data, variable) {
-  if (!variable %in% names(data)) {
-    return("--")
-  }
-
-  format_range(data[[variable]])
-}
-
-share_percent <- function(x) {
-  format_num(mean(x, na.rm = TRUE) * 100, 1)
-}
-```
 
 ## Überblick über die verwendeten Dateien
 
