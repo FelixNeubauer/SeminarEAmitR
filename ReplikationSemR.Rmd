@@ -1511,15 +1511,15 @@ p_fig2_b <- plot_fig2_panel(fig2_b_df, "Panel B. Two-way fixed effects, not acco
 p_fig2_c <- plot_fig2_panel(fig2_c_df, "Panel C. Two-way fixed effects, accounting for seasonality")
 ```
 
-```{r fig2_panel_a, echo=FALSE, fig.width=7, fig.height=4.5, fig.cap='Grafik selbst erstellt in Anlehnung an Figure 2 aus Gu et. al (2021)'}
+```{r fig2_panel_a, include=FALSE, fig.width=7, fig.height=4.5, fig.cap='Grafik selbst erstellt in Anlehnung an Figure 2 aus Gu et. al (2021)'}
 p_fig2_a
 ```
 
-```{r fig2_panel_b, echo=FALSE, fig.width=7, fig.height=4.5, fig.cap='Grafik selbst erstellt in Anlehnung an Figure 2 aus Gu et. al (2021)'}
+```{r fig2_panel_b, include=FALSE, fig.width=7, fig.height=4.5, fig.cap='Grafik selbst erstellt in Anlehnung an Figure 2 aus Gu et. al (2021)'}
 p_fig2_b
 ```
 
-```{r fig2_panel_c, echo=FALSE, fig.width=7, fig.height=4.5, fig.cap='Grafik selbst erstellt in Anlehnung an Figure 2 aus Gu et. al (2021)'}
+```{r fig2_panel_c, include=FALSE, fig.width=7, fig.height=4.5, fig.cap='Grafik selbst erstellt in Anlehnung an Figure 2 aus Gu et. al (2021)'}
 p_fig2_c
 ```
 
