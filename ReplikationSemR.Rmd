@@ -617,7 +617,7 @@ p_fig1_figma <- ggplot(plot_df, aes(x = year)) +
       breaks = c(0, 1000, 2000, 3000, 4000, 5000)
     )
   ) +
-  # Farben mit Hexpicker aus Original übernommen
+  # Farben für Präsentation angepasst
   scale_color_manual(
     values = c("ridership" = "#8BAFAC", "length" = "#171738"),
     breaks = c("ridership", "length")
@@ -709,7 +709,7 @@ ggsave(
 ##### Table 1 Grafik
 
 ```{r grafik1_daten}
-
+# Daten manuell aus Table 1
 data_grafik1_monat <- data_table1_input %>%
   mutate(
     panel = factor(
@@ -752,7 +752,7 @@ data_grafik1_monat <- data_table1_input %>%
   ) %>%
   filter(!is.na(x_plot), !is.na(line_status))
 
-# Die y-Achse wird komprimiert: Der Ausreißer 1684 bleibt sichtbar,
+# Die y-Achse wird komprimiert: Der Ausreißer 1964 bleibt sichtbar,
 # aber die leeren Jahre bis 2004 nehmen nur wenig Platz ein. Danach
 # werden alle Jahre einheitlich auf der y-Achse verteilt.
 map_year_grafik1 <- function(year) {
@@ -764,7 +764,8 @@ map_year_grafik1 <- function(year) {
 
 # Punkte mit identischem Monat und Jahr werden horizontal nebeneinander
 # angeordnet. So bleiben Mehrfacheröffnungen panelübergreifend sichtbar,
-# ohne dass sie sich überdecken.
+# ohne dass sie sich überdecken. Die Span eines CLusters ist dabei Ab-
+# hängig von der Anzahl an Eröffnungen im Monat
 data_grafik1_monat_cluster <- data_grafik1_monat %>%
   group_by(opening_year, x_plot) %>%
   arrange(panel, line_status, opening_date, .by_group = TRUE) %>%
@@ -804,6 +805,8 @@ month_breaks_grafik1 <- c(1:11, 13.0, 15.4)
 
 
 ```{r grafik1, fig.width=12, fig.height=9.5, out.width="73%", dpi=300, dev="png", fig.align="left", fig.cap='Grafik selbst erstellt auf Basis von Table 1 aus Gu et. al (2021)'}
+
+# Plot von eigener Grafik basierend auf Table 1
 plot_data_grafik1_monat <- ggplot(
   data_grafik1_monat_cluster,
   aes(x = x_cluster, y = y_plot, fill = panel, shape = line_status)
@@ -965,9 +968,9 @@ fmt_integer <- function(x) {
 }
 
 stata_quantile <- function(x, probs) {
-  # Für die Quartile nutzen wir die inverse empirische Verteilungsfunktion.
-  # Das entspricht der deskriptiven Idee aus Statas summarize, detail hinreichend
-  # und vermeidet Interpolation zwischen zwei Städten.
+  # Inverse empirische Verteilungsfunktion für Quartile
+  # Das entspricht der deskriptiven Idee aus Statas summarize
+  # und vermeidet Interpolation zwischen zwei Städten
   as.numeric(quantile(x, probs = probs, na.rm = TRUE, type = 1, names = FALSE))
 }
 ```
