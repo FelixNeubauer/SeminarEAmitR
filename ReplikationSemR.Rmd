@@ -329,7 +329,7 @@ p_fig1 <- ggplot(plot_df, aes(x = year)) +
 p_fig1
 ```
 
-```{r plotfig1 präsi, echo=FALSE, dpi=300}
+```{r plotfig1Figma, echo=FALSE, include=FALSE dpi=300}
 # ggplot benötigt einen skalierungsfaktor für die rechte achse
 scale_factor <- 3.2
 
