@@ -1486,9 +1486,33 @@ kbl(
 ##### Figure 3
 
 ```{r fig3_data, echo=FALSE, include=FALSE}
-# Replikation von ReplicaCodes/Fig3.do (Teil III: Graph auf Basis von Fig3_PlaceboWald.dta)
-fig3_df <- read_dta("TablesFigures/Fig3_PlaceboWald.dta") %>%
-  rename(wald_stat = B1) %>%
+# Replikation von ReplicaCodes/Fig3.do (Teil II und III) direkt aus BaseSamp.dta:
+# Für jeden Placebo-Zeitpunkt wird wie in Stata Dp = treat * (wk2open >= i)
+# geschätzt. Der frühere Zwischenschritt über TablesFigures/Fig3_PlaceboWald.dta
+# wird bewusst nicht mehr verwendet.
+fig3_base <- read_dta("Data/BaseSamp.dta") %>%
+  mutate(
+    post = as.numeric(wk2open >= 0)
+  )
+
+fig3_min_wk <- min(fig3_base$wk2open, na.rm = TRUE)
+fig3_max_wk <- max(fig3_base$wk2open, na.rm = TRUE)
+fig3_placebo_weeks <- seq(fig3_min_wk + 1, fig3_max_wk - 1)
+
+fig3_df <- map_dfr(seq_along(fig3_placebo_weeks), function(n) {
+  placebo_week <- fig3_placebo_weeks[n]
+  fig3_model <- feols(
+    lnspd_res ~ Dp + post + treat | linkid + case_wk2open + yrwk[lnpop] + yrwk[lngdppc],
+    cluster = ~case,
+    data = fig3_base %>%
+      mutate(Dp = treat * as.numeric(wk2open >= placebo_week))
+  )
+
+  tibble(
+    wk2open = n - 55,
+    wald_stat = coef(fig3_model)[["Dp"]] / sqrt(vcov(fig3_model)["Dp", "Dp"])
+  )
+}) %>%
   filter(between(wk2open, -47, 47))
 ```
 
