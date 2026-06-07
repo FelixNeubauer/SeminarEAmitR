@@ -1606,12 +1606,12 @@ run_tab5 <- function(data, group = "all", outcome = "lnspd_res", cluster = TRUE)
 tab5_wild_block_bootstrap <- function(data, group, reps = 499, seed = 20260607) {
   # Wild block bootstrapping wie in ReplicaCodes/Tab5.do, aber ohne 499 langsame
   # feols-Neuschätzungen: Nach Frisch-Waugh-Lovell reicht es, TP einmal von den
-  # übrigen Regressoren und Fixed Effects zu bereinigen. Die Bootstrap-Koeffizienten
-  # lassen sich dann direkt aus den case-geblockten Residuen berechnen.
+  # Fixed Effects zu bereinigen. treat wird nicht separat aufgenommen, weil es in
+  # diesen Spezifikationen von den Fixed Effects absorbiert wird.
   data_use <- tab5_subset(data, group)
   original_model <- estimate_tab5(data_use, cluster = FALSE)
   tp_partial_model <- feols(
-    TP ~ treat | linkid + case_wk2open + yrwk[lnpop] + yrwk[lngdppc],
+    TP ~ 1 | linkid + case_wk2open + yrwk[lnpop] + yrwk[lngdppc],
     data = data_use
   )
 
