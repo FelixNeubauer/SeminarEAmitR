@@ -159,7 +159,7 @@ dataset_overview %>%
 
 ## Stadt- und U-Bahn-Daten
 
-`UrbanTransitReports.dta`, `SubwayLines.dta` und `CityChars.dta` beschreiben den institutionellen und städtischen Kontext der Studie. Sie zeigen, in welchen Städten U-Bahn-Systeme existieren, wann neue Linien eröffnet wurden und wie sich Bevölkerung, Wirtschaftsleistung und Verkehrsinfrastruktur unterscheiden. Diese Informationen sind wichtig, weil das Paper den Effekt neuer U-Bahn-Linien nicht isoliert von Stadtgröße, Wohlstand und allgemeiner Verkehrsentwicklung betrachtet.
+`SubwayLines.dta` und `CityChars.dta` beschreiben den institutionellen und städtischen Kontext der Studie. Sie zeigen, in welchen Städten U-Bahn-Systeme existieren, wann neue Linien eröffnet wurden und wie sich Bevölkerung, Wirtschaftsleistung und Verkehrsinfrastruktur unterscheiden. Diese Informationen sind wichtig, weil das Paper den Effekt neuer U-Bahn-Linien nicht isoliert von Stadtgröße, Wohlstand und allgemeiner Verkehrsentwicklung betrachtet.
 
 ```{r daten-stadt-u-bahn, echo=FALSE}
 latest_urban_year <- max(UrbanTransitReports_input$`年份`, na.rm = TRUE)
@@ -202,11 +202,7 @@ city_context <- CityChars_input %>%
   ) %>%
   mutate(across(where(is.numeric), ~ format_num(.x, 2)))
 
-urban_context %>%
-  kbl(caption = paste0("UrbanTransitReports.dta: Stadt- und Verkehrskontext im Jahr ", latest_urban_year), align = c("l", "r")) %>%
-  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"), full_width = FALSE) %>%
-  kable_paper(full_width = FALSE) %>%
-  add_footnote("Quelle: Eigene Berechnung aus UrbanTransitReports.dta.")
+
 
 line_context %>%
   kbl(caption = "SubwayLines.dta: Struktur der U-Bahn-Linien", align = c("l", "r")) %>%
@@ -282,7 +278,7 @@ extend_heterogeneity_summary %>%
   add_footnote("Quelle: Eigene Berechnung aus ExtendSample.dta.")
 ```
 
-Diese aus R erzeugten Übersichten zeigen, wie die Datensätze zusammenhängen: Die Stadt- und Linieninformationen liefern den Kontext des U-Bahn-Ausbaus, während die Straßenabschnitts-Samples die eigentliche Schätzebene der Replikation bilden. Besonders wichtig sind `wk2open` als Ereigniszeit, `treat` als Treatment-Markierung sowie `lnspd_res` und `CI` als zentrale Ergebnis- bzw. Stauvariablen.
+Diese Übersichten zeigen, wie die Datensätze zusammenhängen: Die Stadt- und Linieninformationen liefern den Kontext des U-Bahn-Ausbaus, während die Straßenabschnitts-Samples die eigentliche Schätzebene der Replikation bilden. Besonders wichtig sind `wk2open` als Ereigniszeit, `treat` als Treatment-Markierung sowie `lnspd_res` und `CI` als zentrale Ergebnis- bzw. Stauvariablen.
 
 
 
