@@ -95,219 +95,65 @@ Methodisch basiert die Studie auf einem Difference-in-Differences-Ansatz. Dabei 
 
 Die Autoren kommen zu dem Ergebnis, dass neue U-Bahn-Linien den Straßenverkehr zumindest kurzfristig messbar entlasten. Im ersten Jahr nach der Eröffnung steigt die Geschwindigkeit auf direkt betroffenen Straßen während der Stoßzeiten um durchschnittlich etwa vier Prozent. Der Effekt ist besonders ausgeprägt auf zuvor stark überlasteten Straßen und nimmt mit zunehmender Entfernung zur neuen U-Bahn-Linie ab. Ergänzende Analysen aus Beijing deuten außerdem darauf hin, dass eine bessere U-Bahn-Anbindung mit mehr U-Bahn-Fahrten sowie weniger Bus- und Autofahrten verbunden ist.
 
-# Daten
+# Was ist das
 
-Der folgende Abschnitt orientiert sich am Stil einer kurzen Datendokumentation: Zuerst wird erklärt, welche Rolle die einzelnen Dateien in der Replikation spielen; anschließend werden aus den tatsächlich eingelesenen `.dta`-Dateien kompakte Übersichten berechnet. Dadurch sind die Tabellen nicht händisch abgetippt, sondern werden beim Rendern des Dokuments direkt aus den Daten erzeugt.
+Die Grafik zeigt den massiven Ausbau des chinesischen U-Bahn-Systems seit den frühen 2000er Jahren: Während 2001 nur 4 Städte ein U-Bahn-System hatten, waren es 2017 bereits 30 Städte. Parallel dazu stieg die gesamte Streckenlänge stark an, auf fast 5.000 km, und auch die Fahrgastzahlen wuchsen auf rund 16 Milliarden Fahrten pro Jahr. Für das Paper ist diese Entwicklung zentral, weil der U-Bahn-Boom viele Neueröffnungen in kurzer Zeit erzeugt und damit überhaupt erst eine empirische Analyse über mehrere Städte ermöglicht.
 
+# 0 Überblick
 
+### Zusammenfassung
 
-## Überblick über die verwendeten Dateien
+In ihrem Paper *Subways and Road Congestion* untersuchen Yizhen Gu, Chang Jiang, Junfu Zhang und Ben Zou, ob der Ausbau von U-Bahn-Systemen tatsächlich dazu beitragen kann, Straßenverkehr in chinesischen Städten zu entlasten. Die Studie setzt dabei an einem zentralen verkehrsökonomischen Problem an: Viele schnell wachsende Städte leiden unter zunehmendem Stau, gleichzeitig werden U-Bahnen häufig als Lösung zur Reduktion von Verkehrsbelastung betrachtet.
 
-Die Replikation nutzt einerseits Stadt- und U-Bahn-Daten, mit denen der langfristige Ausbau des chinesischen U-Bahn-Netzes beschrieben wird. Andererseits bilden die Straßenabschnittsdaten die Grundlage der Difference-in-Differences-Analysen: Dort wird verglichen, wie sich Geschwindigkeiten und Stau auf behandelten Straßen relativ zu Kontrollstraßen um den Eröffnungszeitpunkt neuer U-Bahn-Linien entwickeln.
+Besonders relevant ist der chinesische Kontext, da China in den vergangenen Jahren einen massiven Ausbau städtischer U-Bahn-Netze erlebt hat. Zwischen 2001 und 2017 stieg die Gesamtlänge der U-Bahn-Linien in China stark an, während gleichzeitig Bevölkerung, Autobesitz und Verkehrsaufkommen in vielen Großstädten zunahmen. Dadurch entsteht ein geeigneter empirischer Rahmen, um den Effekt neuer U-Bahn-Linien auf den Straßenverkehr zu untersuchen.
 
-```{r daten-uebersicht, echo=FALSE}
-# Überblickstabelle mit Datensatzrollen anlegen
-dataset_overview <- tibble::tibble(
-  Datensatz = c(
-    "Data/UrbanTransitReports.dta",
-    "Data/SubwayLines.dta",
-    "Data/CityChars.dta",
-    "Data/BaseSamp.dta",
-    "Data/ExtendSample.dta",
-    "Data/WithAgainstTraffic.dta",
-    "Data/RushNonrusHours.dta"
-  ),
-  Datenobjekt = list(
-    UrbanTransitReports_input,
-    SubwayLines_input,
-    CityChars_input,
-    BaseSamp_input,
-    ExtendSample_input,
-    WithAgainstTraffic_input,
-    RushNonrusHours_input
-  ),
-  `Ebene der Beobachtung` = c(
-    "Stadt-Jahr",
-    "U-Bahn-Linie",
-    "Stadt",
-    "Straßenabschnitt x Woche",
-    "Straßenabschnitt x Woche",
-    "Straßenabschnitt x Woche x Rush-Hour-Richtung",
-    "Straßenabschnitt x Woche x Zeitfenster"
-  ),
-  `Für welche Analyse?` = c(
-    "Beschreibung des U-Bahn-Ausbaus und der Fahrgastzahlen in Figure 1",
-    "Linieneröffnungen und kumulierte Netzlänge in Figure 1",
-    "Stadtmerkmale und treated/control-Vergleich in Table 2",
-    "Hauptsample für die zentralen DiD-Schätzungen",
-    "Erweitertes Sample für Distanz-, Richtungs- und Stau-Heterogenität",
-    "Heterogenität nach Fahrtrichtung während der Rush Hour",
-    "Vergleich zwischen Rush-Hour- und Non-Rush-Hour-Zeitfenstern"
-  ),
-  `Aus den Daten berechnete Zusatzinfo` = c(
-    paste0(count_distinct(UrbanTransitReports_input, "城市"), " Städte; Jahre ", range_variable(UrbanTransitReports_input, "年份")),
-    paste0(count_distinct(SubwayLines_input, "city"), " Städte; Eröffnungsjahre ", range_variable(SubwayLines_input, "openyear")),
-    paste0(format_int(sum(CityChars_input$treat == 1, na.rm = TRUE)), " treated cities; ", format_int(sum(CityChars_input$treat == 0, na.rm = TRUE)), " control cities"),
-    paste0(count_distinct(BaseSamp_input, "linkid"), " Straßenabschnitte; Wochen relativ zur Eröffnung ", range_variable(BaseSamp_input, "wk2open")),
-    paste0(count_distinct(ExtendSample_input, "linkid"), " Straßenabschnitte; Wochen relativ zur Eröffnung ", range_variable(ExtendSample_input, "wk2open")),
-    paste0(count_distinct(WithAgainstTraffic_input, "linkid"), " Straßenabschnitte; WithTraffic-Anteil ", share_percent(WithAgainstTraffic_input$WithTraffic == 1), "%"),
-    paste0(count_distinct(RushNonrusHours_input, "linkid"), " Straßenabschnitte; Rush-Hour-Anteil ", share_percent(RushNonrusHours_input$rushhour == 1), "%")
-  )
-) %>%
-  # Beobachtungen und Variablen je Datensatz ergänzen
-  mutate(
-    Beobachtungen = map_chr(Datenobjekt, ~ format_int(nrow(.x))),
-    Variablen = map_chr(Datenobjekt, ~ format_int(ncol(.x)))
-  ) %>%
-  select(Datensatz, `Ebene der Beobachtung`, Beobachtungen, Variablen, `Aus den Daten berechnete Zusatzinfo`, `Für welche Analyse?`)
+Für ihre Analyse nutzen die Autoren Daten zu 45 neu eröffneten U-Bahn-Linien in 25 chinesischen Städten im Zeitraum von August 2016 bis Dezember 2017. Diese Informationen kombinieren sie mit hochfrequenten Verkehrsdaten von Baidu Maps, die stündliche Geschwindigkeitsmessungen auf Ebene einzelner Straßenabschnitte enthalten. Dadurch können die Autoren sehr genau beobachten, wie sich die Fahrgeschwindigkeit auf Straßen in der Nähe neuer U-Bahn-Linien vor und nach deren Eröffnung verändert.
 
-# Überblickstabelle ausgeben
-dataset_overview %>%
-  kbl(caption = "Übersicht der in der Replikation verwendeten Datensätze", align = c("l", "l", "r", "r", "l", "l")) %>%
-  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"), full_width = TRUE) %>%
-  kable_paper(full_width = TRUE) %>%
-  add_footnote("Quelle: Eigene Berechnung aus den eingelesenen .dta-Dateien.")
-```
+Methodisch basiert die Studie auf einem Difference-in-Differences-Ansatz. Dabei werden Straßenabschnitte, die direkt von einer neuen U-Bahn-Linie betroffen sein könnten, mit Kontrollstraßen in Städten verglichen, in denen im Untersuchungszeitraum keine neue U-Bahn-Linie eröffnet wurde. Ziel ist es, den kausalen Effekt der U-Bahn-Eröffnung auf die Verkehrsgeschwindigkeit zu isolieren und allgemeine zeitliche Entwicklungen oder saisonale Muster möglichst herauszurechnen.
 
-## Stadt- und U-Bahn-Daten
+##### Zentrale Ergebnisse
 
-`SubwayLines.dta` und `CityChars.dta` beschreiben den institutionellen und städtischen Kontext der Studie. Sie zeigen, in welchen Städten U-Bahn-Systeme existieren, wann neue Linien eröffnet wurden und wie sich Bevölkerung, Wirtschaftsleistung und Verkehrsinfrastruktur unterscheiden. Diese Informationen sind wichtig, weil das Paper den Effekt neuer U-Bahn-Linien nicht isoliert von Stadtgröße, Wohlstand und allgemeiner Verkehrsentwicklung betrachtet.
+Die Autoren kommen zu dem Ergebnis, dass neue U-Bahn-Linien den Straßenverkehr zumindest kurzfristig messbar entlasten. Im ersten Jahr nach der Eröffnung steigt die Geschwindigkeit auf direkt betroffenen Straßen während der Stoßzeiten um durchschnittlich etwa vier Prozent. Der Effekt ist besonders ausgeprägt auf zuvor stark überlasteten Straßen und nimmt mit zunehmender Entfernung zur neuen U-Bahn-Linie ab. Ergänzende Analysen aus Beijing deuten außerdem darauf hin, dass eine bessere U-Bahn-Anbindung mit mehr U-Bahn-Fahrten sowie weniger Bus- und Autofahrten verbunden ist.
 
-```{r daten-stadt-u-bahn, echo=FALSE}
-# Letztes verfügbares Jahr bestimmen
-latest_urban_year <- max(UrbanTransitReports_input$`年份`, na.rm = TRUE)
+### Replikationsumfang
 
-# Stadtkennzahlen für das letzte Datenjahr berechnen
-urban_context <- UrbanTransitReports_input %>%
-  filter(`年份` == latest_urban_year) %>%
-  summarise(
-    `Städte im letzten Datenjahr` = n_distinct(`城市`),
-    `Städte mit U-Bahn` = sum(`是否开通地铁` == 1, na.rm = TRUE),
-    `U-Bahn-Länge insgesamt (km)` = sum(`轨道交通运营线路长度公里`, na.rm = TRUE),
-    `U-Bahn-Fahrgäste insgesamt (Mio.)` = sum(`轨道交通客运量万人次`, na.rm = TRUE) / 100,
-    `Private Pkw insgesamt (10.000 Fahrzeuge)` = sum(`私人汽车拥有量万辆`, na.rm = TRUE),
-    `Durchschnittliche Stadtbevölkerung (10.000)` = mean(`年末总人口万`, na.rm = TRUE)
-  ) %>%
-  pivot_longer(everything(), names_to = "Kennzahl", values_to = "Wert") %>%
-  mutate(Wert = format_num(Wert, 2))
+Der Replikationsumfang umfasst einen großen Teil der zentralen empirischen Analysen des Papers. Repliziert wurden sowohl die deskriptiven Grundlagen der Studie als auch das Hauptergebnis, die dynamischen Effekte, mehrere Robustheits- und Timing-Checks sowie die heterogenen Effekte nach Straßenmerkmalen. Table 1 wurde nicht als empirische Tabelle repliziert, sondern als eigene Grafik auf Basis der tabellarischen Linienauflistung visualisiert, um das Treatment Timing und das CNY-Problem anschaulicher darzustellen. Table 6 konnte dagegen nicht repliziert werden, weil die dafür benötigten Individual- und Haushaltsdaten nicht im Replikationspaket enthalten waren. Figure 7 wurde ohne Datengrundlage nachgebildet, da es sich um eine schematische Darstellung der ökonomischen Interpretation handelt.
 
-# Kennzahlen zu U-Bahn-Linien berechnen
-line_context <- SubwayLines_input %>%
-  summarise(
-    `U-Bahn-Linien` = n(),
-    `Städte` = n_distinct(city),
-    `Durchschnittliche Linienlänge (km)` = mean(lengthkm, na.rm = TRUE),
-    `Median der Linienlänge (km)` = median(lengthkm, na.rm = TRUE),
-    `Durchschnittliche Stationszahl` = mean(stations, na.rm = TRUE),
-    `Erste Eröffnung` = min(openyear, na.rm = TRUE),
-    `Letzte Eröffnung` = max(openyear, na.rm = TRUE)
-  ) %>%
-  pivot_longer(everything(), names_to = "Kennzahl", values_to = "Wert") %>%
-  mutate(Wert = as.character(format_num(as.numeric(Wert), 2)))
-
-# Treated- und Control-Cities vergleichen
-city_context <- CityChars_input %>%
-  mutate(Gruppe = ifelse(treat == 1, "Treated cities", "Control cities")) %>%
-  group_by(Gruppe) %>%
-  summarise(
-    Städte = n(),
-    `Durchschnittliche Bevölkerung (10.000)` = mean(popx10k, na.rm = TRUE),
-    `Durchschnittliches BIP pro Kopf` = mean(gdppc, na.rm = TRUE),
-    `Durchschnittlicher Lohn` = mean(avgwage, na.rm = TRUE),
-    .groups = "drop"
-  ) %>%
-  mutate(across(where(is.numeric), ~ format_num(.x, 2)))
+| Element  | Status                       | Rolle im Report                                                                                        |
+| -------- | ---------------------------- | ------------------------------------------------------------------------------------------------------ |
+| Figure 1 | repliziert                   | Kontext: chinesischer U-Bahn-Boom                                                                      |
+| Figure 2 | repliziert                   | Dynamisches Hauptergebnis / Event-Study-Darstellung                                                    |
+| Figure 3 | repliziert                   | Placebo Timing / Robustheit                                                                            |
+| Figure 4 | repliziert                   | Längerer Pre-Treatment-Zeitraum / Pre-Trend-Robustheit                                                 |
+| Figure 5 | repliziert                   | Timing-Robustheit / CNY-Problematik                                                                    |
+| Figure 6 | repliziert                   | Heterogene Effekte / Mechanismus und Robustheit                                                        |
+| Figure 7 | ohne Daten repliziert        | Schematische ökonomische Interpretation                                                                |
+| Table 1  | Grafik basierend auf Tabelle | Treatment Timing und CNY-Problem                                                                       |
+| Table 2  | repliziert                   | Deskriptive Unterschiede zwischen Treatment und Control                                                |
+| Table 3  | repliziert                   | Statisches Hauptergebnis / Baseline-Schätzung                                                          |
+| Table 4  | repliziert                   | Robustheit gegenüber längeren Pre-Periods und Discontinuity-Spezifikationen                            |
+| Table 5  | repliziert                   | Subsamples nach Opening-Zeitpunkt / Timing-Robustheit                                                  |
+| Table 6  | nicht repliziert             | Substitution zwischen Verkehrsmitteln; nicht repliziert, da die benötigten Daten nicht vorhanden waren |
 
 
 
-# Linienübersicht ausgeben
-line_context %>%
-  kbl(caption = "SubwayLines.dta: Struktur der U-Bahn-Linien", align = c("l", "r")) %>%
-  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"), full_width = FALSE) %>%
-  kable_paper(full_width = FALSE) %>%
-  add_footnote("Quelle: Eigene Berechnung aus SubwayLines.dta.")
 
-# Stadtvergleich ausgeben
-city_context %>%
-  kbl(caption = "CityChars.dta: Treated- und Control-Cities im Vergleich", align = c("l", "r", "r", "r", "r")) %>%
-  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"), full_width = FALSE) %>%
-  kable_paper(full_width = FALSE) %>%
-  add_footnote("Quelle: Eigene Berechnung aus CityChars.dta.")
-```
+# 1 Kontext
 
-## Straßenabschnitts- und Verkehrsdaten
+### Warum ist Road Congestion ein ökonomisches Problem?
 
-Die eigentliche empirische Identifikation beruht auf Straßenabschnitten (`linkid`) und Wochen relativ zur Eröffnung einer U-Bahn-Linie (`wk2open`). `BaseSamp.dta` enthält das zentrale balanced panel für die Hauptergebnisse. `ExtendSample.dta` erweitert diese Struktur um räumliche Maße wie Distanzen zur nächsten Linie oder Station und Indikatoren für besonders betroffene Straßen. `WithAgainstTraffic.dta` und `RushNonrusHours.dta` ermöglichen anschließend Heterogenitätsanalysen nach Fahrtrichtung und Tageszeit.
-
-```{r daten-strassen-samples, echo=FALSE}
-# Verkehrssamples zusammenfassen
-traffic_sample_summary <- tibble::tibble(
-  Sample = c("BaseSamp", "ExtendSample", "WithAgainstTraffic", "RushNonrusHours"),
-  Datenobjekt = list(BaseSamp_input, ExtendSample_input, WithAgainstTraffic_input, RushNonrusHours_input)
-) %>%
-  mutate(
-    Beobachtungen = map_chr(Datenobjekt, ~ format_int(nrow(.x))),
-    `Straßenabschnitte` = map_chr(Datenobjekt, ~ count_distinct(.x, "linkid")),
-    `Vergleichsfälle` = map_chr(Datenobjekt, ~ count_distinct(.x, "case")),
-    `Wochen relativ zur Eröffnung` = map_chr(Datenobjekt, ~ range_variable(.x, "wk2open")),
-    `Ø Congestion Index` = map_chr(Datenobjekt, ~ if ("CI" %in% names(.x)) format_num(mean(.x$CI, na.rm = TRUE), 3) else format_num(mean(.x$CI_WithAgainstTraffic, na.rm = TRUE), 3)),
-    `Ø residualisierte Log-Geschwindigkeit` = map_chr(Datenobjekt, ~ if ("lnspd_res" %in% names(.x)) format_num(mean(.x$lnspd_res, na.rm = TRUE), 4) else format_num(mean(.x$lnspd_res_WithAgainstTraffic, na.rm = TRUE), 4))
-  ) %>%
-  select(-Datenobjekt)
-
-# Tabelle der Verkehrssamples ausgeben
-traffic_sample_summary %>%
-  kbl(caption = "Verkehrssamples: Umfang und zentrale Verkehrsmaße", align = c("l", "r", "r", "r", "l", "r", "r")) %>%
-  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"), full_width = TRUE) %>%
-  kable_paper(full_width = TRUE) %>%
-  add_footnote("Quelle: Eigene Berechnung aus den Verkehrsdatensätzen.")
-
-# Treatment- und Kontrollstraßen im Basissample vergleichen
-base_treatment_summary <- BaseSamp_input %>%
-  mutate(Gruppe = ifelse(treat == 1, "Treated road segments", "Control road segments")) %>%
-  group_by(Gruppe) %>%
-  summarise(
-    Beobachtungen = n(),
-    Straßenabschnitte = n_distinct(linkid),
-    `Ø Geschwindigkeit (km/h)` = mean(speed, na.rm = TRUE),
-    `Ø Congestion Index` = mean(CI, na.rm = TRUE),
-    .groups = "drop"
-  ) %>%
-  mutate(across(where(is.numeric), ~ format_num(.x, 2)))
-
-# Basissample-Vergleich ausgeben
-base_treatment_summary %>%
-  kbl(caption = "BaseSamp.dta: Treated- und Control-Straßen im Vergleich", align = c("l", "r", "r", "r", "r")) %>%
-  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"), full_width = FALSE) %>%
-  kable_paper(full_width = FALSE) %>%
-  add_footnote("Quelle: Eigene Berechnung aus BaseSamp.dta.")
-
-# Heterogenitätsvariablen zusammenfassen
-extend_heterogeneity_summary <- ExtendSample_input %>%
-  summarise(
-    `Direkt betroffene Straßen (%)` = mean(MostAffectedLinks == 1, na.rm = TRUE) * 100,
-    `Stärker gestaute Straßen (%)` = mean(MoreCongested == 1, na.rm = TRUE) * 100,
-    `Ø Entfernung zur nächsten behandelten Linie (km)` = mean(link2_nearest_treat_line_km, na.rm = TRUE),
-    `Ø Entfernung zur nächsten Station (km)` = mean(dist2stn, na.rm = TRUE),
-    `Anteil Post-Periode (%)` = mean(post == 1, na.rm = TRUE) * 100
-  ) %>%
-  pivot_longer(everything(), names_to = "Kennzahl", values_to = "Wert") %>%
-  mutate(Wert = format_num(Wert, 2))
-
-# Heterogenitätsübersicht ausgeben
-extend_heterogeneity_summary %>%
-  kbl(caption = "ExtendSample.dta: Variablen für Heterogenitätsanalysen", align = c("l", "r")) %>%
-  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"), full_width = FALSE) %>%
-  kable_paper(full_width = FALSE) %>%
-  add_footnote("Quelle: Eigene Berechnung aus ExtendSample.dta.")
-```
-
-Diese Übersichten zeigen, wie die Datensätze zusammenhängen: Die Stadt- und Linieninformationen liefern den Kontext des U-Bahn-Ausbaus, während die Straßenabschnitts-Samples die eigentliche Schätzebene der Replikation bilden. Besonders wichtig sind `wk2open` als Ereigniszeit, `treat` als Treatment-Markierung sowie `lnspd_res` und `CI` als zentrale Ergebnis- bzw. Stauvariablen.
+Straßenstau ist aus ökonomischer Sicht mehr als nur ein alltägliches Mobilitätsproblem. Er verursacht Zeitverluste für Pendlerinnen und Pendler, senkt die Zuverlässigkeit von Fahrten und bindet Ressourcen, die produktiver eingesetzt werden könnten. Besonders relevant ist dabei, dass einzelne Verkehrsteilnehmer die von ihnen verursachten Verzögerungen für andere nicht vollständig berücksichtigen. Stau ist damit ein klassisches Externalitätenproblem: Jede zusätzliche Autofahrt kann die Geschwindigkeit vieler anderer Verkehrsteilnehmer verringern. Gu et al. (2021) zeigen diesen Zusammenhang auch in ihrer Wohlfahrtsbetrachtung. Wenn eine neue U-Bahn-Linie die Straßengeschwindigkeit erhöht, profitieren nicht nur die Personen, die zur U-Bahn wechseln, sondern auch jene, die weiterhin Auto oder Bus fahren. Für Peking berechnen die Autoren, dass allein die Zeitersparnis durch höhere Straßengeschwindigkeit pro Auto- oder Buspendelfahrt etwa 0,10 US-Dollar wert ist.
 
 
+### Fundamental Law of Road Congestion
+
+Das „Fundamental Law of Road Congestion“ beschreibt die Idee, dass zusätzlicher Straßenraum langfristig nicht unbedingt zu weniger Stau führt. Nach dieser Logik steigt die gefahrene Verkehrsmenge ungefähr proportional mit der verfügbaren Straßenkapazität: Werden mehr Straßen oder Fahrspuren gebaut, wird Autofahren attraktiver, wodurch zusätzlicher Verkehr induziert wird. Duranton und Turner (2011) finden für US-Städte, dass dieses Muster auch für städtische Straßen gilt und dass öffentlicher Verkehr dort die insgesamt gefahrenen Fahrzeugkilometer nicht wesentlich reduziert. Für das Paper von Gu et al. (2021) ist diese Literatur der zentrale Ausgangspunkt: Wenn zusätzliche Straßenkapazität Stau kaum reduziert, stellt sich die Frage, ob U-Bahnen als alternative Form urbaner Verkehrsinfrastruktur anders wirken. Die Studie liefert hierfür Gegenbelege im chinesischen Kontext, zumindest kurzfristig: Nach der Eröffnung neuer U-Bahn-Linien steigt die Geschwindigkeit auf nahegelegenen Straßen messbar an.
+
+### Warum China ein geeignetes Setting ist
+
+China ist für diese Forschungsfrage besonders geeignet, weil dort in kurzer Zeit ein außergewöhnlich starker Ausbau urbaner U-Bahn-Systeme stattgefunden hat. Während 2001 nur vier Städte in Festlandchina ein U-Bahn-System hatten, verfügten Ende 2017 bereits 30 Städte über insgesamt 4.476 Kilometer U-Bahn-Linien; zusätzlich hatten zwölf weitere Städte ihre ersten Linien im Bau. Diese starke Expansion erzeugt viele klar datierbare Treatment-Zeitpunkte. Gu et al. (2021) nutzen konkret 45 neue U-Bahn-Linien, die zwischen August 2016 und Dezember 2017 in 25 Städten eröffnet wurden. Gleichzeitig stehen mit Baidu-Maps-Daten sehr detaillierte Informationen zur Straßengeschwindigkeit auf Ebene einzelner Straßenabschnitte zur Verfügung. Die Kombination aus massivem U-Bahn-Ausbau und granularen Echtzeit-Verkehrsdaten macht China daher zu einem ungewöhnlich guten Setting, um den Effekt neuer U-Bahn-Linien auf Straßenstau empirisch zu untersuchen.
 
 ##### Figure 1
-
 ```{r DataUrbantransitVorbereiten, echo=FALSE, include = FALSE}
 # Datensatz einlesen
 urban <- UrbanTransitReports_input
@@ -730,6 +576,23 @@ ggsave(
 
 ```
 
+
+
+
+
+# 2 Institutioneller Hintergrund und Treatment
+
+Die Studie nutzt den massiven Ausbau chinesischer U-Bahn-Systeme als empirisches Setting, um den Effekt neuer Schieneninfrastruktur auf Straßenverkehr zu untersuchen. Institutionell relevant ist dabei, dass viele chinesische Städte in kurzer Zeit neue U-Bahn-Linien eröffneten und diese Eröffnungen klar datierbare Ereignisse darstellen. Dadurch lassen sich die neuen Linien als Treatment interpretieren, dessen Wirkung auf die Straßengeschwindigkeit vor und nach der Eröffnung analysiert werden kann.
+
+
+### Neue U-Bahn-Linien als Treatment
+
+Das Treatment in der Studie besteht in der Eröffnung neuer U-Bahn-Linien in chinesischen Städten. Gu et al. (2021) untersuchen insgesamt 45 neue Linien beziehungsweise Linienerweiterungen, die zwischen August 2016 und Dezember 2017 in 25 Städten eröffnet wurden. Die Grundidee ist, dass eine neue U-Bahn-Linie für bestimmte Fahrten eine Alternative zum Auto oder Bus schafft und dadurch die Nachfrage nach Straßennutzung auf nahegelegenen oder substituierbaren Straßenabschnitten sinken kann. Besonders relevant sind dabei nicht einfach alle Straßen in der Nähe einer U-Bahn, sondern jene Straßenabschnitte, die laut Routenplanungsdaten von Baidu Maps tatsächlich als Autostrecken für Fahrten infrage kommen, die alternativ mit der neuen U-Bahn zurückgelegt werden könnten. Diese direkt betroffenen Straßenabschnitte bilden den Kern des Treatment-Samples. Der kausale Effekt wird somit als Veränderung der Straßengeschwindigkeit nach der Eröffnung einer neuen U-Bahn-Linie interpretiert, relativ zu vergleichbaren Straßenabschnitten in Kontrollstädten ohne neue Linie im selben Zeitraum.
+
+### Treatment Timing und Chinese New Year
+
+Ein zentrales Identifikationsproblem der Studie liegt im Timing der U-Bahn-Eröffnungen. Die offiziellen Eröffnungsdaten sind nicht zufällig verteilt, sondern häufen sich stark am Jahresende: 25 der 45 untersuchten Linien wurden im Dezember eröffnet. Das ist problematisch, weil diese Phase zeitlich nahe am Chinese New Year liegt, einer Periode, in der sich Verkehrsmuster in chinesischen Städten ohnehin stark verändern können. Viele Menschen reisen aus den großen Städten ab, wirtschaftliche Aktivität verlangsamt sich und Straßen können auch ohne neue U-Bahn-Linie weniger ausgelastet sein. Dadurch könnte ein beobachteter Anstieg der Straßengeschwindigkeit fälschlicherweise dem Treatment zugeschrieben werden, obwohl er teilweise durch saisonale Effekte entsteht. Dieses Problem wird zusätzlich dadurch verschärft, dass die Kontrollstädte im Durchschnitt kleiner und etwas ärmer sind als die Treatment-Städte, sodass sich saisonale Verkehrsrückgänge zwischen beiden Gruppen unterscheiden können. Die Autoren adressieren dieses Problem, indem sie in ihrem Difference-in-Differences-Design für unterschiedliche Saisonalität nach Stadtmerkmalen kontrollieren und zusätzliche Robustheitschecks mit Linien durchführen, die außerhalb dieser kritischen Jahresendperiode eröffnet wurden.
+
 ##### Table 1 Grafik
 
 ```{r grafik1_daten}
@@ -801,7 +664,8 @@ data_grafik1_monat_cluster <- data_grafik1_monat %>%
       n_cluster == 2L ~ 0.15,
       n_cluster == 3L ~ 0.25,
       n_cluster == 4L ~ 0.35,
-      n_cluster > 4L ~ 0.75,
+      n_cluster == 5L ~ 0.45,
+      n_cluster > 5L ~ 0.75,
       TRUE ~ 0
     ),
     x_offset = if (n() == 1L) {
@@ -963,6 +827,224 @@ theme(
 plot_data_grafik1_monat
 ```
 
+
+
+# 3 Daten und Sample Construction
+
+Die empirische Analyse von Gu et al. (2021) basiert auf der Verknüpfung von U-Bahn-Eröffnungen, Stadtmerkmalen und hochfrequenten Verkehrsdaten. Zentral ist dabei nicht nur, welche Städte neue U-Bahn-Linien erhalten, sondern auch, welche konkreten Straßenabschnitte durch diese neuen Linien potenziell entlastet werden. Aus den ursprünglichen Rohdaten entsteht dadurch ein Paneldatensatz auf Ebene von Straßenabschnitt und Woche, der für die Difference-in-Differences-Schätzung genutzt wird.
+
+### Datenquellen
+
+Die wichtigste Datenquelle sind stündliche Geschwindigkeitsdaten von Baidu Maps auf Ebene einzelner Straßenabschnitte. Diese Daten entstehen aus Standortinformationen mobiler Geräte, die bei aktivierten Ortungsdiensten regelmäßig an Baidu Maps gesendet werden. Aus diesen Bewegungsdaten berechnet Baidu die durchschnittliche Geschwindigkeit auf einzelnen road segments. Dadurch können die Autoren Verkehrsveränderungen deutlich granularer messen als mit klassischen Haushaltsbefragungen oder aggregierten städtischen Verkehrsdaten.
+
+Ergänzend verwenden die Autoren Daten zu U-Bahn-Linien, ihren Eröffnungsdaten und ihrer geografischen Lage. Diese Informationen sind notwendig, um Treatment-Zeitpunkte zu definieren und Straßenabschnitte räumlich den jeweiligen U-Bahn-Linien zuzuordnen. Zusätzlich werden Stadtmerkmale wie Bevölkerung und BIP pro Kopf verwendet, um systematische Unterschiede zwischen Treatment- und Kontrollstädten zu beschreiben und in der Schätzung für unterschiedliche saisonale Muster zu kontrollieren. Weitere Daten zu öffentlichem Verkehr und Pendelverhalten werden im Paper vor allem für ergänzende Analysen und die Wohlfahrtsinterpretation genutzt, stehen aber nicht im Zentrum der Hauptschätzung.
+
+### Überblick über Datensätze
+
+Die Replikation nutzt einerseits Stadt- und U-Bahn-Daten, mit denen der langfristige Ausbau des chinesischen U-Bahn-Netzes beschrieben wird. Andererseits bilden die Straßenabschnittsdaten die Grundlage der Difference-in-Differences-Analysen: Dort wird verglichen, wie sich Geschwindigkeiten und Stau auf behandelten Straßen relativ zu Kontrollstraßen um den Eröffnungszeitpunkt neuer U-Bahn-Linien entwickeln.
+
+```{r daten-uebersicht, echo=FALSE}
+# Überblickstabelle mit Datensatzrollen anlegen
+dataset_overview <- tibble::tibble(
+  Datensatz = c(
+    "Data/UrbanTransitReports.dta",
+    "Data/SubwayLines.dta",
+    "Data/CityChars.dta",
+    "Data/BaseSamp.dta",
+    "Data/ExtendSample.dta",
+    "Data/WithAgainstTraffic.dta",
+    "Data/RushNonrusHours.dta"
+  ),
+  Datenobjekt = list(
+    UrbanTransitReports_input,
+    SubwayLines_input,
+    CityChars_input,
+    BaseSamp_input,
+    ExtendSample_input,
+    WithAgainstTraffic_input,
+    RushNonrusHours_input
+  ),
+  `Ebene der Beobachtung` = c(
+    "Stadt-Jahr",
+    "U-Bahn-Linie",
+    "Stadt",
+    "Straßenabschnitt x Woche",
+    "Straßenabschnitt x Woche",
+    "Straßenabschnitt x Woche x Rush-Hour-Richtung",
+    "Straßenabschnitt x Woche x Zeitfenster"
+  ),
+  `Für welche Analyse?` = c(
+    "Beschreibung des U-Bahn-Ausbaus und der Fahrgastzahlen in Figure 1",
+    "Linieneröffnungen und kumulierte Netzlänge in Figure 1",
+    "Stadtmerkmale und treated/control-Vergleich in Table 2",
+    "Hauptsample für die zentralen DiD-Schätzungen",
+    "Erweitertes Sample für Distanz-, Richtungs- und Stau-Heterogenität",
+    "Heterogenität nach Fahrtrichtung während der Rush Hour",
+    "Vergleich zwischen Rush-Hour- und Non-Rush-Hour-Zeitfenstern"
+  ),
+  `Aus den Daten berechnete Zusatzinfo` = c(
+    paste0(count_distinct(UrbanTransitReports_input, "城市"), " Städte; Jahre ", range_variable(UrbanTransitReports_input, "年份")),
+    paste0(count_distinct(SubwayLines_input, "city"), " Städte; Eröffnungsjahre ", range_variable(SubwayLines_input, "openyear")),
+    paste0(format_int(sum(CityChars_input$treat == 1, na.rm = TRUE)), " treated cities; ", format_int(sum(CityChars_input$treat == 0, na.rm = TRUE)), " control cities"),
+    paste0(count_distinct(BaseSamp_input, "linkid"), " Straßenabschnitte; Wochen relativ zur Eröffnung ", range_variable(BaseSamp_input, "wk2open")),
+    paste0(count_distinct(ExtendSample_input, "linkid"), " Straßenabschnitte; Wochen relativ zur Eröffnung ", range_variable(ExtendSample_input, "wk2open")),
+    paste0(count_distinct(WithAgainstTraffic_input, "linkid"), " Straßenabschnitte; WithTraffic-Anteil ", share_percent(WithAgainstTraffic_input$WithTraffic == 1), "%"),
+    paste0(count_distinct(RushNonrusHours_input, "linkid"), " Straßenabschnitte; Rush-Hour-Anteil ", share_percent(RushNonrusHours_input$rushhour == 1), "%")
+  )
+) %>%
+  # Beobachtungen und Variablen je Datensatz ergänzen
+  mutate(
+    Beobachtungen = map_chr(Datenobjekt, ~ format_int(nrow(.x))),
+    Variablen = map_chr(Datenobjekt, ~ format_int(ncol(.x)))
+  ) %>%
+  select(Datensatz, `Ebene der Beobachtung`, Beobachtungen, Variablen, `Für welche Analyse?`)
+
+# Überblickstabelle ausgeben
+dataset_overview %>%
+  kbl(caption = "Übersicht der in der Replikation verwendeten Datensätze", align = c("l", "l", "r", "r", "l", "l")) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"), full_width = TRUE) %>%
+  kable_paper(full_width = TRUE) %>%
+  add_footnote("Quelle: Eigene Berechnung aus den eingelesenen .dta-Dateien.")
+```
+
+
+
+### U-Bahn- und Stadtdaten
+
+Die Treatment-Information stammt aus den Eröffnungen neuer U-Bahn-Linien in chinesischen Städten. Im Untersuchungszeitraum zwischen August 2016 und Dezember 2017 wurden 45 neue Linien beziehungsweise Linienerweiterungen in 25 Städten eröffnet. Für jede dieser Linien wird ein offizielles Eröffnungsdatum verwendet, das den Treatment-Zeitpunkt definiert. Straßenabschnitte in der Nähe einer neuen Linie gelten jedoch nicht automatisch als gleich stark betroffen. Entscheidend ist, ob die neue U-Bahn-Linie für bestimmte Verkehrsbeziehungen tatsächlich eine Alternative zur Autofahrt darstellen kann.
+
+Neben den U-Bahn-Daten spielen die Stadtmerkmale eine wichtige Rolle. Die Kontrollgruppe besteht aus Städten, die zwar bestehende oder geplante U-Bahn-Systeme haben, aber im Untersuchungszeitraum keine neue Linie eröffneten. Diese Städte dienen als Vergleichsgruppe für die Treatment-Städte. Da sich Treatment- und Kontrollstädte jedoch in Größe und wirtschaftlicher Leistungsfähigkeit unterscheiden, werden Stadtmerkmale wie Bevölkerung und BIP pro Kopf nicht nur deskriptiv berichtet, sondern auch methodisch relevant: Sie helfen, unterschiedliche saisonale Verkehrsmuster zwischen Städten zu berücksichtigen.
+
+```{r daten-stadt-u-bahn, echo=FALSE}
+# Hilfsfunktion: ganze Zahlen ohne Nachkommastellen, sonst mit 2 Nachkommastellen
+format_num_mixed <- function(x, digits = 2) {
+  sapply(x, function(z) {
+    if (is.na(z)) {
+      return(NA_character_)
+    }
+    
+    if (abs(z - round(z)) < 1e-8) {
+      format_num(z, 0)
+    } else {
+      format_num(z, digits)
+    }
+  })
+}
+
+# Letztes verfügbares Jahr bestimmen
+latest_urban_year <- max(UrbanTransitReports_input$`年份`, na.rm = TRUE)
+
+# Stadtkennzahlen für das letzte Datenjahr berechnen
+urban_context <- UrbanTransitReports_input %>%
+  filter(`年份` == latest_urban_year) %>%
+  summarise(
+    `Städte im letzten Datenjahr` = n_distinct(`城市`),
+    `Städte mit U-Bahn` = sum(`是否开通地铁` == 1, na.rm = TRUE),
+    `U-Bahn-Länge insgesamt (km)` = sum(`轨道交通运营线路长度公里`, na.rm = TRUE),
+    `U-Bahn-Fahrgäste insgesamt (Mio.)` = sum(`轨道交通客运量万人次`, na.rm = TRUE) / 100,
+    `Private Pkw insgesamt (10.000 Fahrzeuge)` = sum(`私人汽车拥有量万辆`, na.rm = TRUE),
+    `Durchschnittliche Stadtbevölkerung (10.000)` = mean(`年末总人口万`, na.rm = TRUE)
+  ) %>%
+  pivot_longer(everything(), names_to = "Kennzahl", values_to = "Wert") %>%
+  mutate(Wert = format_num_mixed(Wert, 2))
+
+# Kennzahlen zu U-Bahn-Linien berechnen
+line_context <- SubwayLines_input %>%
+  summarise(
+    `U-Bahn-Linien` = n(),
+    `Städte` = n_distinct(city),
+    `Durchschnittliche Linienlänge (km)` = mean(lengthkm, na.rm = TRUE),
+    `Median der Linienlänge (km)` = median(lengthkm, na.rm = TRUE),
+    `Durchschnittliche Stationszahl` = mean(stations, na.rm = TRUE),
+    `Erste Eröffnung` = min(openyear, na.rm = TRUE),
+    `Letzte Eröffnung` = max(openyear, na.rm = TRUE)
+  ) %>%
+  pivot_longer(everything(), names_to = "Kennzahl", values_to = "Wert") %>%
+  mutate(Wert = format_num_mixed(as.numeric(Wert), 2))
+
+# Linienübersicht ausgeben
+line_context %>%
+  kbl(caption = "SubwayLines.dta: Struktur der U-Bahn-Linien", align = c("l", "r")) %>%
+  kable_styling(
+    bootstrap_options = c("striped", "hover", "condensed", "responsive"),
+    full_width = FALSE
+  ) %>%
+  kable_paper(full_width = FALSE) %>%
+  add_footnote("Quelle: Eigene Berechnung aus SubwayLines.dta.")
+```
+
+### Straßenabschnitte und Verkehrsdaten
+
+Für die Verkehrsdaten wählen die Autoren zunächst ausgewählte 5-Kilometer-Abschnitte von neuen, bestehenden und geplanten U-Bahn-Linien aus. Um diese Linienabschnitte wird jeweils ein 2,5-Kilometer-Buffer gelegt. Innerhalb dieser Pufferzonen werden die Straßenabschnitte aus den Baidu-Maps-Daten extrahiert. Dadurch entsteht ein räumlich fokussierter Datensatz von Straßen, die plausibel vom U-Bahn-Ausbau betroffen sein könnten. Das Sample ist deshalb nicht als vollständiges Abbild des gesamten Stadtverkehrs zu verstehen, sondern als gezielte Auswahl relevanter Straßenräume rund um U-Bahn-Linien.
+
+Das Baseline-Sample wird zusätzlich eingeschränkt. Die Autoren konzentrieren sich auf Rush-Hour-Zeiten an Werktagen, weil gerade dort Stau ökonomisch besonders relevant ist und eine Entlastung durch U-Bahnen am wahrscheinlichsten sichtbar wird. Außerdem werden sogenannte directly affected road segments identifiziert. Das sind Straßenabschnitte, die laut Routenplanung von Baidu Maps auf Autofahrten liegen würden, für die die neue U-Bahn-Linie eine plausible Alternative darstellt. Diese Konstruktion ist wichtig, weil sie das Treatment nicht nur räumlich, sondern auch verkehrslogisch definiert: Relevant sind vor allem jene Straßen, auf denen Autoverkehr durch U-Bahn-Nutzung substituiert werden könnte.
+
+```{r daten-strassen-samples, echo=FALSE}
+# Verkehrssamples zusammenfassen
+traffic_sample_summary <- tibble::tibble(
+  Sample = c("BaseSamp", "ExtendSample", "WithAgainstTraffic", "RushNonrusHours"),
+  Datenobjekt = list(BaseSamp_input, ExtendSample_input, WithAgainstTraffic_input, RushNonrusHours_input)
+) %>%
+  mutate(
+    Beobachtungen = map_chr(Datenobjekt, ~ format_int(nrow(.x))),
+    `Straßenabschnitte` = map_chr(Datenobjekt, ~ count_distinct(.x, "linkid")),
+    `Vergleichsfälle` = map_chr(Datenobjekt, ~ count_distinct(.x, "case")),
+    `Wochen relativ zur Eröffnung` = map_chr(Datenobjekt, ~ range_variable(.x, "wk2open")),
+    `Ø Congestion Index` = map_chr(Datenobjekt, ~ if ("CI" %in% names(.x)) format_num(mean(.x$CI, na.rm = TRUE), 3) else format_num(mean(.x$CI_WithAgainstTraffic, na.rm = TRUE), 3)),
+    `Ø residualisierte Log-Geschwindigkeit` = map_chr(Datenobjekt, ~ if ("lnspd_res" %in% names(.x)) format_num(mean(.x$lnspd_res, na.rm = TRUE), 4) else format_num(mean(.x$lnspd_res_WithAgainstTraffic, na.rm = TRUE), 4))
+  ) %>%
+  select(-Datenobjekt)
+
+# Tabelle der Verkehrssamples ausgeben
+traffic_sample_summary %>%
+  kbl(caption = "Verkehrssamples: Umfang und zentrale Verkehrsmaße", align = c("l", "r", "r", "r", "l", "r", "r")) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"), full_width = TRUE) %>%
+  kable_paper(full_width = TRUE) %>%
+  add_footnote("Quelle: Eigene Berechnung aus den Verkehrsdatensätzen.")
+
+# Treatment- und Kontrollstraßen im Basissample vergleichen
+base_treatment_summary <- BaseSamp_input %>%
+  mutate(Gruppe = ifelse(treat == 1, "Treated road segments", "Control road segments")) %>%
+  group_by(Gruppe) %>%
+  summarise(
+    Beobachtungen = n(),
+    Straßenabschnitte = n_distinct(linkid),
+    `Ø Geschwindigkeit (km/h)` = mean(speed, na.rm = TRUE),
+    `Ø Congestion Index` = mean(CI, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(across(where(is.numeric), ~ format_num(.x, 2)))
+
+# Basissample-Vergleich ausgeben
+base_treatment_summary %>%
+  kbl(caption = "BaseSamp.dta: Treated- und Control-Straßen im Vergleich", align = c("l", "r", "r", "r", "r")) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"), full_width = FALSE) %>%
+  kable_paper(full_width = FALSE) %>%
+  add_footnote("Quelle: Eigene Berechnung aus BaseSamp.dta.")
+
+# Heterogenitätsvariablen zusammenfassen
+extend_heterogeneity_summary <- ExtendSample_input %>%
+  summarise(
+    `Direkt betroffene Straßen (%)` = mean(MostAffectedLinks == 1, na.rm = TRUE) * 100,
+    `Stärker gestaute Straßen (%)` = mean(MoreCongested == 1, na.rm = TRUE) * 100,
+    `Ø Entfernung zur nächsten behandelten Linie (km)` = mean(link2_nearest_treat_line_km, na.rm = TRUE),
+    `Ø Entfernung zur nächsten Station (km)` = mean(dist2stn, na.rm = TRUE),
+    `Anteil Post-Periode (%)` = mean(post == 1, na.rm = TRUE) * 100
+  ) %>%
+  pivot_longer(everything(), names_to = "Kennzahl", values_to = "Wert") %>%
+  mutate(Wert = format_num(Wert, 2))
+
+# Heterogenitätsübersicht ausgeben
+extend_heterogeneity_summary %>%
+  kbl(caption = "ExtendSample.dta: Variablen für Heterogenitätsanalysen", align = c("l", "r")) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"), full_width = FALSE) %>%
+  kable_paper(full_width = FALSE) %>%
+  add_footnote("Quelle: Eigene Berechnung aus ExtendSample.dta.")
+```
+
+### Deskriptive Unterschiede zwischen Treatment und Control
+
+Die deskriptiven Statistiken sind für die Studie methodisch besonders wichtig. Sie zeigen, dass Treatment- und Kontrollstädte keine perfekten Zwillinge sind. Die Treatment-Städte sind im Durchschnitt deutlich größer und etwas wohlhabender als die Kontrollstädte. Das ist für die Identifikation relevant, weil größere und wirtschaftlich stärkere Städte andere Verkehrsdynamiken haben können als kleinere Städte. Besonders problematisch ist dies rund um Chinese New Year, wenn viele Menschen aus großen Städten abreisen und sich die Verkehrsbelastung auch ohne neue U-Bahn-Linie verändern kann.
 
 ##### Table 2
 
@@ -1453,6 +1535,72 @@ kable(
 }
 ```
 
+
+Table 2 ist daher nicht nur eine reine Datenbeschreibung, sondern eine erste Warnung für die Identifikation. Wenn Treatment-Städte systematisch größer und reicher sind, reicht ein einfacher Vorher-Nachher-Vergleich nicht aus. Ein beobachteter Anstieg der Straßengeschwindigkeit nach einer U-Bahn-Eröffnung könnte sonst teilweise auf unterschiedliche saisonale Muster oder allgemeine Stadtunterschiede zurückzuführen sein. Genau deshalb verwenden Gu et al. (2021) ein Difference-in-Differences-Design mit Fixed Effects und zusätzlichen Kontrollen für unterschiedliche Saisonalität nach Stadtmerkmalen.
+
+
+
+
+
+# 4 Empirische Strategie
+
+Die empirische Strategie von Gu et al. (2021) zielt darauf ab, den kausalen Effekt neuer U-Bahn-Linien auf die Straßengeschwindigkeit zu schätzen. Ein einfacher Vergleich der Geschwindigkeit vor und nach einer Eröffnung wäre problematisch, weil sich Verkehr über die Zeit auch aus anderen Gründen verändert, etwa durch Wochentage, Rush-Hour-Muster, saisonale Effekte oder Chinese New Year. Deshalb kombinieren die Autoren hochfrequente Straßendaten mit einem Difference-in-Differences-Design, das behandelte Straßenabschnitte mit Kontrollstraßen vergleicht und gleichzeitig viele zeitliche und räumliche Störfaktoren herausrechnet.
+
+### Outcome: residualisierte Straßengeschwindigkeit
+
+Die abhängige Variable der empirischen Analyse ist nicht die rohe Straßengeschwindigkeit, sondern eine residualisierte logarithmierte Geschwindigkeit. Der Grund dafür ist, dass sich Geschwindigkeit systematisch nach Straßenabschnitt, Wochentag und Tageszeit unterscheidet. Ein zentraler Straßenabschnitt während der Rush Hour ist beispielsweise grundsätzlich langsamer als derselbe Abschnitt zu einer weniger stark belasteten Tageszeit. Um solche stabilen Muster herauszurechnen, schätzen Gu et al. (2021) zunächst folgende Hilfsregression:
+
+$$
+\ln(speed_{lt}) = \lambda_{l,dow,h} + \varepsilon_{lt}
+$$
+
+Dabei bezeichnet $speed_{lt}$ die Geschwindigkeit auf Straßenabschnitt $l$ zum Zeitpunkt $t$. Die Fixed Effects $\lambda_{l,dow,h}$ kontrollieren für die Kombination aus Straßenabschnitt, Wochentag und Stunde. Der Residualterm $\varepsilon_{lt}$ misst damit, ob ein Straßenabschnitt zu einem bestimmten Zeitpunkt schneller oder langsamer ist als für genau diesen Straßenabschnitt, diesen Wochentag und diese Stunde üblich. Diese Residuen werden anschließend auf Wochenebene aggregiert. Das Outcome der Hauptschätzung ist somit die wöchentliche Abweichung der logarithmierten Geschwindigkeit vom normalen Verkehrsmuster eines Straßenabschnitts.
+
+Diese Residualisierung ist methodisch wichtig, weil sie typische Tages- und Wochenmuster bereits vor der eigentlichen Difference-in-Differences-Schätzung entfernt. Die Analyse basiert dadurch nicht darauf, dass manche Straßen grundsätzlich schneller oder langsamer sind, sondern auf Veränderungen relativ zum jeweils normalen Geschwindigkeitsniveau. Ein positiver Treatment-Effekt bedeutet daher, dass Straßenabschnitte nach der Eröffnung einer U-Bahn-Linie schneller werden, als es aufgrund ihres üblichen Verkehrsmusters zu erwarten wäre.
+
+### Stacked Difference-in-Differences
+
+Zur Schätzung des kausalen Effekts verwenden Gu et al. (2021) ein stacked Difference-in-Differences-Design. Jede neue U-Bahn-Linie bildet dabei eine eigene Vergleichsgruppe. Die direkt betroffenen Straßenabschnitte in der jeweiligen Treatment-Stadt werden mit Straßenabschnitten aus Kontrollstädten verglichen, die im Untersuchungszeitraum keine neue U-Bahn-Linie eröffneten. Den Kontrollstraßen wird künstlich dasselbe Eröffnungsdatum zugewiesen wie der jeweiligen Treatment-Linie. Dadurch wird für jede Eröffnung ein Vergleich zwischen behandelten und unbehandelten Straßenabschnitten im selben Kalenderzeitraum konstruiert.
+
+Die zentrale dynamische Schätzgleichung lautet:
+
+$$
+\widetilde{\ln(speed)}_{lgw}
+=
+\sum_{\substack{w=\underline{w} \ w \neq -1}}^{\overline{w}}
+\beta_w \cdot T_{lg} \cdot d_{gw}
++
+\lambda_l
++
+\lambda_{gw}
++
+\gamma_t \cdot d_t \cdot X_c
++
+\varepsilon_{lgw}
+$$
+
+Die abhängige Variable $\widetilde{\ln(speed)}*{lgw}$ ist die wöchentliche residualisierte logarithmierte Geschwindigkeit eines Straßenabschnitts. $T*{lg}$ zeigt an, ob ein Straßenabschnitt zur Treatment-Gruppe gehört. $d_{gw}$ ist ein Indikator für die Woche relativ zur Eröffnung der jeweiligen U-Bahn-Linie. Die Koeffizienten $\beta_w$ messen damit den Effekt der U-Bahn-Eröffnung in jeder Woche vor und nach dem Treatment. Die Woche direkt vor der Eröffnung, also $w = -1$, wird ausgelassen und dient als Referenzperiode.
+
+Die Fixed Effects $\lambda_l$ kontrollieren für zeitinvariante Unterschiede zwischen Straßenabschnitten, etwa Lage, Straßentyp oder dauerhaft unterschiedliche Verkehrsbelastung. Die group-by-week-to-opening Fixed Effects $\lambda_{gw}$ kontrollieren für zeitliche Muster, die innerhalb einer Vergleichsgruppe gemeinsam auftreten. Der zusätzliche Term $\gamma_t \cdot d_t \cdot X_c$ erlaubt es, dass saisonale Effekte je nach Stadtmerkmalen wie Bevölkerung und BIP pro Kopf unterschiedlich ausfallen. Das ist besonders wichtig, weil viele U-Bahn-Eröffnungen am Jahresende stattfanden und damit nahe an Chinese New Year liegen.
+
+
+### Identifikationsannahme und mögliche Probleme
+
+Die zentrale Identifikationsannahme ist eine Parallel-Trends-Annahme: Ohne neue U-Bahn-Linie hätten sich die behandelten Straßenabschnitte ähnlich entwickelt wie die Kontrollstraßen. Anders formuliert: Der beobachtete Unterschied nach der Eröffnung darf nicht durch andere zeitgleich eintretende Faktoren verursacht werden, die nur die Treatment-Städte oder die betroffenen Straßenabschnitte betreffen. Die Autoren prüfen diese Annahme unter anderem über die Pre-Treatment-Koeffizienten in der Event-Study-Grafik. Wenn diese vor der Eröffnung nahe bei null liegen, spricht das dafür, dass es keine offensichtlichen unterschiedlichen Trends vor dem Treatment gab.
+
+Trotzdem bleibt die Identifikation anspruchsvoll. Ein erstes Problem ist, dass U-Bahn-Linien nicht zufällig gebaut werden. Sie entstehen typischerweise dort, wo Verkehrsprobleme besonders groß sind oder wo starkes Stadtwachstum erwartet wird. Für die interne Validität ist das nicht automatisch fatal, solange sich die Trends vor der Eröffnung nicht systematisch unterscheiden. Für die Interpretation bedeutet es aber, dass der geschätzte Effekt eher für verkehrlich relevante, gezielt ausgewählte U-Bahn-Korridore gilt und nicht für zufällig platzierte Linien.
+
+Ein zweites und besonders wichtiges Problem ist das Treatment Timing. Viele U-Bahn-Linien wurden am Jahresende eröffnet, also kurz vor Chinese New Year. In dieser Zeit verändern sich Verkehrsmuster in chinesischen Städten ohnehin stark, weil viele Menschen verreisen und wirtschaftliche Aktivität zurückgeht. Dieses Problem wird dadurch verschärft, dass Treatment-Städte im Durchschnitt größer und wohlhabender sind als Kontrollstädte und deshalb potenziell stärker von saisonalen Verkehrsrückgängen betroffen sind. Die Autoren adressieren dies, indem sie unterschiedliche Saisonalität nach Stadtmerkmalen kontrollieren und zusätzliche Robustheitschecks mit unterschiedlichen Zeitfenstern und Teilstichproben durchführen.
+
+Ein weiteres mögliches Problem betrifft Bauarbeiten und Antizipationseffekte. U-Bahn-Bau kann Straßenverkehr bereits vor der offiziellen Eröffnung beeinflussen, etwa durch Baustellen oder temporäre Straßensperrungen. Deshalb beschränken die Autoren das Baseline-Fenster vor der Eröffnung auf die letzten sechs Wochen, in denen größere Bauarbeiten typischerweise abgeschlossen sein sollten. Gleichzeitig könnten Haushalte oder Pendler ihr Verhalten bereits vor der Eröffnung anpassen, weil die neue Linie lange im Voraus bekannt ist. Diese Punkte sind keine vollständige Widerlegung der Ergebnisse, aber sie zeigen, dass der geschätzte Effekt nur dann kausal interpretiert werden kann, wenn die verbleibenden zeitgleichen Veränderungen ausreichend durch Fixed Effects, Saisonalitätskontrollen und Robustheitschecks aufgefangen werden.
+
+
+# 5 Hauptergebnisse
+
+Die Hauptergebnisse zeigen, dass neue U-Bahn-Linien die Straßengeschwindigkeit auf direkt betroffenen Straßenabschnitten erhöhen. Entscheidend ist dabei nicht nur, ob nach der Eröffnung ein positiver Effekt sichtbar wird, sondern auch, ob sich bereits vor der Eröffnung unterschiedliche Trends zwischen Treatment- und Kontrollstraßen zeigen. Deshalb werden zunächst die dynamischen Effekte rund um den Eröffnungszeitpunkt betrachtet und anschließend die durchschnittlichen Baseline-Effekte in einer Regressions-Tabelle zusammengefasst.
+
+### Dynamische Effekte um die U-Bahn-Eröffnung
+
 ##### Figure 2
 ```{r fig2_data, echo=FALSE}
 # Basissample auf das Event-Study-Fenster begrenzen
@@ -1551,20 +1699,24 @@ p_fig2_b <- plot_fig2_panel(fig2_b_df, "Panel B. Two-way fixed effects, not acco
 p_fig2_c <- plot_fig2_panel(fig2_c_df, "Panel C. Two-way fixed effects, accounting for seasonality")
 ```
 
+
 ```{r fig2_panel_a, include=FALSE, fig.width=7, fig.height=4.5, fig.cap='Grafik selbst erstellt in Anlehnung an Figure 2 aus Gu et. al (2021)'}
 # Panel A separat ausgeben
 p_fig2_a
 ```
+
 
 ```{r fig2_panel_b, include=FALSE, fig.width=7, fig.height=4.5, fig.cap='Grafik selbst erstellt in Anlehnung an Figure 2 aus Gu et. al (2021)'}
 # Panel B separat ausgeben
 p_fig2_b
 ```
 
+
 ```{r fig2_panel_c, include=FALSE, fig.width=7, fig.height=4.5, fig.cap='Grafik selbst erstellt in Anlehnung an Figure 2 aus Gu et. al (2021)'}
 # Panel C separat ausgeben
 p_fig2_c
 ```
+
 
 ```{r fig2_combined, echo=FALSE, fig.width=10, fig.height=7.5, fig.cap='Grafik selbst erstellt in Anlehnung an Figure 2 aus Gu et. al (2021)'}
 # Drei Panels zu einer Abbildung kombinieren
@@ -1577,6 +1729,20 @@ p_fig2_c
     heights = c(1, 1)
   )
 ```
+
+
+
+
+
+Figure 2 zeigt die geschätzten dynamischen Treatment-Effekte in den Wochen vor und nach der Eröffnung einer neuen U-Bahn-Linie. Auf der x-Achse sind die Wochen relativ zur Eröffnung abgetragen, wobei Woche 0 den Zeitpunkt der Inbetriebnahme markiert. Auf der y-Achse stehen die geschätzten Koeffizienten der Event-Study-Spezifikation. Da die abhängige Variable die residualisierte logarithmierte Geschwindigkeit ist, können die Koeffizienten näherungsweise als prozentuale Veränderung der Straßengeschwindigkeit interpretiert werden.
+
+Panel A zeigt die Hauptspezifikation mit dem stacked Difference-in-Differences-Design. Vor der Eröffnung liegen die Koeffizienten nahe bei null, was gegen starke unterschiedliche Pre-Trends zwischen Treatment- und Kontrollstraßen spricht. Direkt nach der Eröffnung steigen die Koeffizienten deutlich an. Der Effekt liegt in den ersten Wochen bereits bei ungefähr 2 bis 3 Prozent, erreicht nach einigen Wochen Werte um etwa 5 Prozent und stabilisiert sich anschließend überwiegend im Bereich von etwa 3 bis 4 Prozent. Das spricht dafür, dass neue U-Bahn-Linien relativ schnell zu einer messbaren Entlastung nahegelegener Straßen führen.
+
+Panels B und C dienen als Vergleichsspezifikationen mit Two-way Fixed Effects. Panel B berücksichtigt keine zusätzliche Anpassung für unterschiedliche Saisonalität, während Panel C für solche saisonalen Unterschiede kontrolliert. Beide Panels zeigen ein ähnliches Muster: Nach der U-Bahn-Eröffnung steigen die geschätzten Effekte an und bleiben über viele Wochen positiv. Die Schätzungen sind teilweise weniger präzise als im stacked-DID-Modell, aber die grundlegende Aussage bleibt erhalten. Damit stützt Figure 2 die Interpretation, dass der beobachtete Geschwindigkeitsanstieg nicht nur ein Artefakt einer einzelnen Spezifikation ist.
+
+
+
+### Baseline Regression
 
 ##### Table 3
 
@@ -1670,6 +1836,96 @@ kableExtra::kbl(
   font-weight: normal !important;
 }
 ```
+
+Table 3 fasst die Hauptergebnisse in einer statischen Regressionsspezifikation zusammen. Statt für jede Woche relativ zur Eröffnung einen eigenen Effekt zu schätzen, wird hier die gesamte Post-Treatment-Periode über den Koeffizienten `Treated × post` zusammengefasst. Dieser Koeffizient misst den durchschnittlichen Effekt einer U-Bahn-Eröffnung auf die residualisierte logarithmierte Straßengeschwindigkeit nach dem Treatment.
+
+In der bevorzugten stacked-DID-Spezifikation in Spalte (1) beträgt der geschätzte Koeffizient 0.044. Das entspricht näherungsweise einem Anstieg der Straßengeschwindigkeit um 4,4 Prozent auf direkt betroffenen Straßenabschnitten. Der Standardfehler liegt bei 0.008, sodass der Effekt statistisch präzise geschätzt ist. Die Spezifikation enthält Straßenabschnitt-Fixed-Effects, group-by-week-to-opening Fixed Effects, eine Anpassung für unterschiedliche Saisonalität sowie Kontrollstraßen aus Städten ohne neue U-Bahn-Eröffnung im Untersuchungszeitraum.
+
+Die Spalten (2) und (3) verwenden alternativ Two-way-Fixed-Effects-Modelle nur mit Straßenabschnitten aus Treatment-Städten. Beide Spezifikationen ergeben einen etwas kleineren, aber weiterhin positiven Effekt von 0.036, also ungefähr 3,6 Prozent. In Spalte (3) wird zusätzlich für unterschiedliche Saisonalität nach Stadtmerkmalen kontrolliert; der geschätzte Effekt bleibt unverändert. Das ist wichtig, weil viele U-Bahn-Linien am Jahresende eröffnet wurden und Verkehrsmuster rund um Chinese New Year stark saisonal geprägt sein können.
+
+Insgesamt zeigen Figure 2 und Table 3 dasselbe Grundmuster: Nach der Eröffnung neuer U-Bahn-Linien steigt die Geschwindigkeit auf betroffenen Straßenabschnitten messbar an. Die dynamische Darstellung spricht zusätzlich dafür, dass dieser Anstieg zeitlich eng mit der Eröffnung zusammenfällt und nicht bereits lange vorher einsetzt. Die Baseline-Regression verdichtet dieses Ergebnis zu einem durchschnittlichen Effekt von etwa 3,6 bis 4,4 Prozent. Damit liefern die Autoren direkte Evidenz dafür, dass U-Bahn-Ausbau Straßenstau zumindest kurzfristig reduzieren kann.
+
+
+
+
+# 6 Robustheit und Identifikationsprobleme
+
+Die Hauptergebnisse sprechen für einen positiven Effekt neuer U-Bahn-Linien auf die Straßengeschwindigkeit. Für die kausale Interpretation reicht das Baseline-Ergebnis allein jedoch nicht aus. Entscheidend ist, ob der geschätzte Effekt tatsächlich durch die U-Bahn-Eröffnung entsteht oder durch andere zeitgleiche Entwicklungen, etwa saisonale Verkehrsmuster, Chinese New Year, Bauarbeiten oder allgemeine Trends in Treatment-Städten. Die folgenden Robustheitsanalysen prüfen deshalb vor allem drei Punkte: ob der Effekt zeitlich zur tatsächlichen Eröffnung passt, ob er auch bei längeren Pre-Periods bestehen bleibt und wie stark die Ergebnisse vom problematischen Treatment Timing rund um Chinese New Year abhängen.
+
+### Placebo Opening Dates
+
+##### Figure 3
+
+```{r fig3_data, echo=FALSE, include=FALSE}
+# Replikation von ReplicaCodes/Fig3.do (Teil II und III) direkt aus BaseSamp.dta:
+# Für jeden Placebo-Zeitpunkt wird wie in Stata Dp = treat * (wk2open >= i)
+# geschätzt. Der frühere Zwischenschritt über TablesFigures/Fig3_PlaceboWald.dta
+# wird bewusst nicht mehr verwendet.
+fig3_base <- BaseSamp_input %>%
+  mutate(
+    post = as.numeric(wk2open >= 0)
+  )
+
+fig3_min_wk <- min(fig3_base$wk2open, na.rm = TRUE)
+fig3_max_wk <- max(fig3_base$wk2open, na.rm = TRUE)
+fig3_placebo_weeks <- seq(fig3_min_wk + 1, fig3_max_wk - 1)
+
+fig3_df <- map_dfr(seq_along(fig3_placebo_weeks), function(n) {
+  placebo_week <- fig3_placebo_weeks[n]
+  fig3_model <- feols(
+    lnspd_res ~ Dp + post + treat | linkid + case_wk2open + yrwk[lnpop] + yrwk[lngdppc],
+    cluster = ~case,
+    data = fig3_base %>%
+      mutate(Dp = treat * as.numeric(wk2open >= placebo_week))
+  )
+
+  tibble(
+    wk2open = n - 55,
+    wald_stat = coef(fig3_model)[["Dp"]] / sqrt(vcov(fig3_model)["Dp", "Dp"])
+  )
+}) %>%
+  filter(between(wk2open, -47, 47))
+```
+
+```{r fig3_plot, echo=FALSE, fig.cap='Grafik selbst erstellt in Anlehnung an Figure 3 aus Gu et. al (2021)'}
+# Darstellung analog zum Stata-Graphen in Fig3.do
+p_fig3 <- ggplot(fig3_df, aes(x = wk2open, y = wald_stat)) +
+  geom_hline(yintercept = 1:5, color = "#B0B4B8", linewidth = 0.8) +
+  geom_point(shape = 4, color = "#5f7f77", size = 0.9, stroke = 1.35) +
+  geom_vline(xintercept = 0, color = "red", linewidth = 0.9) +
+  scale_x_continuous(
+    breaks = seq(-48, 48, by = 4),
+    limits = c(-48, 48)
+  ) +
+  scale_y_continuous(
+    breaks = 0:5,
+    limits = c(0, 5.4),
+    expand = expansion(mult = c(0, 0.02))
+  ) +
+  labs(
+    x = "Week relative to opening",
+    y = "Wald statistic"
+  ) +
+  theme_classic(base_size = 16) +
+  theme(
+    panel.grid = element_blank(),
+    plot.background = element_rect(fill = "white", color = NA),
+    panel.background = element_rect(fill = "white", color = NA),
+    axis.line = element_line(color = "#3A3A3A", linewidth = 0.7),
+    axis.ticks = element_line(color = "#3A3A3A", linewidth = 0.6),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+
+p_fig3
+```
+
+Figure 3 untersucht, ob der geschätzte Effekt tatsächlich rund um die reale U-Bahn-Eröffnung auftritt oder ob er auch bei künstlich verschobenen Eröffnungszeitpunkten sichtbar wäre. Dafür wird das Modell wiederholt mit Placebo Opening Dates geschätzt, also mit fiktiven Treatment-Zeitpunkten vor und nach der tatsächlichen Eröffnung. Für jede dieser Schätzungen wird die Wald-Statistik des zentralen Treatment-Koeffizienten dargestellt.
+
+Die Logik ist einfach: Wenn der Effekt nur durch allgemeine Trends oder saisonale Bewegungen getrieben wäre, müsste die stärkste Evidenz nicht zwingend genau beim echten Eröffnungszeitpunkt liegen. In Figure 3 liegt die Wald-Statistik jedoch klar am höchsten in der Nähe von Woche 0, also beim tatsächlichen Opening Date. Danach fällt sie deutlich ab. Das spricht dafür, dass der geschätzte Effekt zeitlich eng mit der U-Bahn-Eröffnung verbunden ist.
+
+Der Test ist allerdings keine vollständige Lösung aller Identifikationsprobleme. Er zeigt vor allem, dass der Effekt nicht beliebig im Zeitverlauf auftaucht. Er kann aber nicht vollständig ausschließen, dass andere Ereignisse ebenfalls genau mit der U-Bahn-Eröffnung zusammenfallen, etwa das Ende von Bauarbeiten, Änderungen im Busnetz oder veränderte Verkehrsführungen rund um neue Stationen. Der Placebo-Test stärkt daher die Interpretation der Ergebnisse, ersetzt aber keine inhaltliche Diskussion möglicher zeitgleicher Confounder.
+
+### Längere Pre-Period und Difference-in-Discontinuity
 
 ##### Table 4
 
@@ -1791,58 +2047,93 @@ kbl(
 }
 ```
 
-##### Figure 3
 
-```{r fig3_data, echo=FALSE, include=FALSE}
-# Replikation von ReplicaCodes/Fig3.do (Teil II und III) direkt aus BaseSamp.dta:
-# Für jeden Placebo-Zeitpunkt wird wie in Stata Dp = treat * (wk2open >= i)
-# geschätzt. Der frühere Zwischenschritt über TablesFigures/Fig3_PlaceboWald.dta
-# wird bewusst nicht mehr verwendet.
-fig3_base <- BaseSamp_input %>%
-  mutate(
-    post = as.numeric(wk2open >= 0)
+
+Table 4 prüft, ob die Ergebnisse davon abhängen, dass die Baseline-Spezifikation nur die letzten sechs Wochen vor der Eröffnung als Pre-Period verwendet. Das ist relevant, weil eine kurze Pre-Period zwar Bauarbeiten kurz vor der Eröffnung ausblenden soll, aber gleichzeitig weniger Informationen über mögliche längerfristige Trends liefert. Die Autoren wiederholen die Schätzung deshalb mit längeren Pre-Periods von 12, 24 und 48 Wochen.
+
+Die Ergebnisse bleiben in diesen Spezifikationen sehr ähnlich. Der geschätzte Effekt liegt bei 0.043, 0.039 und 0.039 und damit nahe am Baseline-Ergebnis. Das spricht dagegen, dass der Haupteffekt nur durch die enge Wahl des Pre-Treatment-Fensters entsteht. Gleichzeitig zeigt der zweite Teil der Tabelle Difference-in-Discontinuity-Spezifikationen mit flexiblen Treatment-spezifischen Zeittrends. Auch hier bleibt der Effekt positiv, fällt aber bei flexibleren Trends kleiner aus: von 0.042 bei linearem Trend auf 0.028 beziehungsweise 0.023 bei Polynomen höherer Ordnung. Das ist grundsätzlich beruhigend, zeigt aber auch, dass die genaue Effektgröße nicht völlig unabhängig von der Modellierung zeitlicher Trends ist.
+
+##### Figure 4
+
+```{r fig4_data, echo=FALSE, include=FALSE}
+# Replikation von ReplicaCodes/Fig4.do
+fig4_base <- BaseSamp_input %>%
+  filter(between(wk2open, -48, 47))
+
+# Event-Time-Dummies wie im Stata-Code: Am48-Am2, A0, Ap1-Ap47
+for (w in -48:-2) {
+  nm <- paste0("Am", abs(w))
+  fig4_base[[nm]] <- fig4_base$treat * as.numeric(fig4_base$wk2open == w)
+}
+fig4_base$A0 <- fig4_base$treat * as.numeric(fig4_base$wk2open == 0)
+for (w in 1:47) {
+  nm <- paste0("Ap", w)
+  fig4_base[[nm]] <- fig4_base$treat * as.numeric(fig4_base$wk2open == w)
+}
+
+rhs_fig4 <- c(
+  paste0("Am", 48:2),
+  "A0",
+  paste0("Ap", 1:47),
+  "treat"
+)
+
+form_fig4 <- as.formula(
+  paste0(
+    "lnspd_res ~ ",
+    paste(rhs_fig4, collapse = " + "),
+    " | linkid + case_wk2open + yrwk[lnpop] + yrwk[lngdppc]"
   )
+)
 
-fig3_min_wk <- min(fig3_base$wk2open, na.rm = TRUE)
-fig3_max_wk <- max(fig3_base$wk2open, na.rm = TRUE)
-fig3_placebo_weeks <- seq(fig3_min_wk + 1, fig3_max_wk - 1)
+mod_fig4 <- feols(form_fig4, cluster = ~case, data = fig4_base)
 
-fig3_df <- map_dfr(seq_along(fig3_placebo_weeks), function(n) {
-  placebo_week <- fig3_placebo_weeks[n]
-  fig3_model <- feols(
-    lnspd_res ~ Dp + post + treat | linkid + case_wk2open + yrwk[lnpop] + yrwk[lngdppc],
-    cluster = ~case,
-    data = fig3_base %>%
-      mutate(Dp = treat * as.numeric(wk2open >= placebo_week))
-  )
+wk_seq <- -48:47
+coef_val <- rep(NA_real_, length(wk_seq))
+se_val <- rep(NA_real_, length(wk_seq))
 
-  tibble(
-    wk2open = n - 55,
-    wald_stat = coef(fig3_model)[["Dp"]] / sqrt(vcov(fig3_model)["Dp", "Dp"])
-  )
-}) %>%
-  filter(between(wk2open, -47, 47))
+for (i in seq_along(wk_seq)) {
+  w <- wk_seq[i]
+  if (w <= -2) {
+    nm <- paste0("Am", abs(w))
+    coef_val[i] <- unname(coef(mod_fig4)[nm])
+    se_val[i] <- sqrt(vcov(mod_fig4)[nm, nm])
+  } else if (w == -1) {
+    coef_val[i] <- 0
+    se_val[i] <- 0
+  } else if (w == 0) {
+    coef_val[i] <- unname(coef(mod_fig4)["A0"])
+    se_val[i] <- sqrt(vcov(mod_fig4)["A0", "A0"])
+  } else {
+    nm <- paste0("Ap", w)
+    coef_val[i] <- unname(coef(mod_fig4)[nm])
+    se_val[i] <- sqrt(vcov(mod_fig4)[nm, nm])
+  }
+}
+
+fig4_df <- tibble(
+  wk2open = wk_seq,
+  coef = coef_val,
+  se = se_val,
+  lo = coef - 1.96 * se,
+  hi = coef + 1.96 * se
+)
 ```
 
-```{r fig3_plot, echo=FALSE, fig.cap='Grafik selbst erstellt in Anlehnung an Figure 3 aus Gu et. al (2021)'}
-# Darstellung analog zum Stata-Graphen in Fig3.do
-p_fig3 <- ggplot(fig3_df, aes(x = wk2open, y = wald_stat)) +
-  geom_hline(yintercept = 1:5, color = "#B0B4B8", linewidth = 0.8) +
-  geom_point(shape = 4, color = "#5f7f77", size = 0.9, stroke = 1.35) +
-  geom_vline(xintercept = 0, color = "red", linewidth = 0.9) +
-  scale_x_continuous(
-    breaks = seq(-48, 48, by = 4),
-    limits = c(-48, 48)
-  ) +
+```{r fig4_plot, echo=FALSE, fig.cap='Grafik selbst erstellt in Anlehnung an Figure 4 aus Gu et. al (2021)'}
+# Darstellung analog zu Figure 4 (Longer Pre-Treatment Periods)
+p_fig4 <- ggplot(fig4_df, aes(x = wk2open, y = coef)) +
+  geom_hline(yintercept = c(-0.05, 0, 0.05, 0.10), color = "#B0B4B8", linewidth = 0.6) +
+  geom_errorbar(aes(ymin = lo, ymax = hi), width = 0.6, color = "#6d8d84", linewidth = 0.7) +
+  geom_point(shape = 16, size = 2.3, color = "#6d8d84") +
+  geom_vline(xintercept = 0, color = "#90343a", linewidth = 0.8) +
+  scale_x_continuous(breaks = seq(-48, 48, by = 4), limits = c(-48, 48)) +
   scale_y_continuous(
-    breaks = 0:5,
-    limits = c(0, 5.4),
-    expand = expansion(mult = c(0, 0.02))
+    breaks = c(-0.05, 0, 0.05, 0.10),
+    limits = c(-0.065, 0.105),
+    labels = c("-0.05", "0", "0.05", "0.1")
   ) +
-  labs(
-    x = "Week relative to opening",
-    y = "Wald statistic"
-  ) +
+  labs(x = "Weeks to subway opening", y = "Coefficient") +
   theme_classic(base_size = 16) +
   theme(
     panel.grid = element_blank(),
@@ -1853,8 +2144,14 @@ p_fig3 <- ggplot(fig3_df, aes(x = wk2open, y = wald_stat)) +
     axis.text.x = element_text(angle = 45, hjust = 1)
   )
 
-p_fig3
+p_fig4
 ```
+
+Figure 4 ergänzt diese Evidenz grafisch. Sie zeigt die dynamischen Koeffizienten für ein deutlich längeres Zeitfenster von bis zu 48 Wochen vor und nach der U-Bahn-Eröffnung. Vor der Eröffnung schwanken die Koeffizienten überwiegend um null und zeigen keinen klaren positiven Vortrend. Direkt nach der Eröffnung steigen die Koeffizienten an und bleiben in der Post-Period überwiegend positiv.
+
+Diese Darstellung ist wichtig für die Parallel-Trends-Annahme. Wenn die behandelten Straßenabschnitte bereits lange vor der Eröffnung systematisch schneller geworden wären, wäre die kausale Interpretation problematisch. Figure 4 liefert dafür keine starke Evidenz. Gleichzeitig bleiben die Konfidenzintervalle teilweise breit, sodass die Grafik eher als unterstützender Robustheitscheck zu verstehen ist und nicht als endgültiger Beweis perfekter Paralleltrends.
+
+### Das CNY-Problem
 
 ##### Table 5
 
@@ -2041,100 +2338,9 @@ kbl(
 
 
 
+Das zentrale Identifikationsproblem der Studie ist das Treatment Timing rund um Chinese New Year. Viele U-Bahn-Linien wurden am Jahresende eröffnet. Genau in dieser Zeit verändern sich Verkehrsmuster in chinesischen Städten stark, weil viele Menschen verreisen und wirtschaftliche Aktivität zurückgeht. Dadurch kann Straßengeschwindigkeit auch ohne neue U-Bahn-Linie steigen. Besonders problematisch ist, dass Treatment-Städte im Durchschnitt größer und wohlhabender sind als Kontrollstädte und deshalb möglicherweise stärker von solchen saisonalen Verkehrsrückgängen betroffen sind.
 
-##### Figure 4
-
-```{r fig4_data, echo=FALSE, include=FALSE}
-# Replikation von ReplicaCodes/Fig4.do
-fig4_base <- BaseSamp_input %>%
-  filter(between(wk2open, -48, 47))
-
-# Event-Time-Dummies wie im Stata-Code: Am48-Am2, A0, Ap1-Ap47
-for (w in -48:-2) {
-  nm <- paste0("Am", abs(w))
-  fig4_base[[nm]] <- fig4_base$treat * as.numeric(fig4_base$wk2open == w)
-}
-fig4_base$A0 <- fig4_base$treat * as.numeric(fig4_base$wk2open == 0)
-for (w in 1:47) {
-  nm <- paste0("Ap", w)
-  fig4_base[[nm]] <- fig4_base$treat * as.numeric(fig4_base$wk2open == w)
-}
-
-rhs_fig4 <- c(
-  paste0("Am", 48:2),
-  "A0",
-  paste0("Ap", 1:47),
-  "treat"
-)
-
-form_fig4 <- as.formula(
-  paste0(
-    "lnspd_res ~ ",
-    paste(rhs_fig4, collapse = " + "),
-    " | linkid + case_wk2open + yrwk[lnpop] + yrwk[lngdppc]"
-  )
-)
-
-mod_fig4 <- feols(form_fig4, cluster = ~case, data = fig4_base)
-
-wk_seq <- -48:47
-coef_val <- rep(NA_real_, length(wk_seq))
-se_val <- rep(NA_real_, length(wk_seq))
-
-for (i in seq_along(wk_seq)) {
-  w <- wk_seq[i]
-  if (w <= -2) {
-    nm <- paste0("Am", abs(w))
-    coef_val[i] <- unname(coef(mod_fig4)[nm])
-    se_val[i] <- sqrt(vcov(mod_fig4)[nm, nm])
-  } else if (w == -1) {
-    coef_val[i] <- 0
-    se_val[i] <- 0
-  } else if (w == 0) {
-    coef_val[i] <- unname(coef(mod_fig4)["A0"])
-    se_val[i] <- sqrt(vcov(mod_fig4)["A0", "A0"])
-  } else {
-    nm <- paste0("Ap", w)
-    coef_val[i] <- unname(coef(mod_fig4)[nm])
-    se_val[i] <- sqrt(vcov(mod_fig4)[nm, nm])
-  }
-}
-
-fig4_df <- tibble(
-  wk2open = wk_seq,
-  coef = coef_val,
-  se = se_val,
-  lo = coef - 1.96 * se,
-  hi = coef + 1.96 * se
-)
-```
-
-```{r fig4_plot, echo=FALSE, fig.cap='Grafik selbst erstellt in Anlehnung an Figure 4 aus Gu et. al (2021)'}
-# Darstellung analog zu Figure 4 (Longer Pre-Treatment Periods)
-p_fig4 <- ggplot(fig4_df, aes(x = wk2open, y = coef)) +
-  geom_hline(yintercept = c(-0.05, 0, 0.05, 0.10), color = "#B0B4B8", linewidth = 0.6) +
-  geom_errorbar(aes(ymin = lo, ymax = hi), width = 0.6, color = "#6d8d84", linewidth = 0.7) +
-  geom_point(shape = 16, size = 2.3, color = "#6d8d84") +
-  geom_vline(xintercept = 0, color = "#90343a", linewidth = 0.8) +
-  scale_x_continuous(breaks = seq(-48, 48, by = 4), limits = c(-48, 48)) +
-  scale_y_continuous(
-    breaks = c(-0.05, 0, 0.05, 0.10),
-    limits = c(-0.065, 0.105),
-    labels = c("-0.05", "0", "0.05", "0.1")
-  ) +
-  labs(x = "Weeks to subway opening", y = "Coefficient") +
-  theme_classic(base_size = 16) +
-  theme(
-    panel.grid = element_blank(),
-    plot.background = element_rect(fill = "white", color = NA),
-    panel.background = element_rect(fill = "white", color = NA),
-    axis.line = element_line(color = "#3A3A3A", linewidth = 0.7),
-    axis.ticks = element_line(color = "#3A3A3A", linewidth = 0.6),
-    axis.text.x = element_text(angle = 45, hjust = 1)
-  )
-
-p_fig4
-```
+Table 5 adressiert dieses Problem, indem die Autoren die Linien nach Eröffnungszeitpunkt in Teilstichproben aufteilen. In der engen Spezifikation mit allen Linien und einem kurzen Fenster von sechs Wochen vor bis drei Wochen nach Eröffnung beträgt der Effekt 0.036. Für Linien, die vor dem 31. Januar 2017 eröffnet wurden, liegt der Effekt bei 0.050. Für Linien, die zwischen Februar und November 2017 eröffnet wurden, beträgt er 0.039. Dieser zweite Wert ist besonders wichtig, weil diese Gruppe weniger direkt vom Jahresend- und CNY-Problem betroffen ist. Für Linien nach dem 1. Dezember 2017 fällt der Effekt mit 0.022 kleiner aus und das Konfidenzintervall umfasst null.
 
 ##### Figure 5
 ```{r fig5_data, echo=FALSE}
@@ -2267,6 +2473,15 @@ p_fig5_c <- plot_fig5_panel(
     heights = c(1, 1)
   )
 ```
+
+Figure 5 zeigt die entsprechenden dynamischen Effekte für die drei Eröffnungsgruppen. Panel A und Panel B liefern relativ klare positive Effekte nach der Eröffnung. Besonders Panel B ist für die Identifikation relevant, weil die dort betrachteten Eröffnungen außerhalb der stark problematischen Jahresendperiode liegen. Dass auch hier positive Effekte sichtbar sind, spricht gegen die Interpretation, dass das gesamte Hauptergebnis nur durch Chinese-New-Year-Saisonalität entsteht.
+
+Panel C ist schwächer. Für die Linien nach dem 1. Dezember 2017 sind die Schätzungen weniger präzise und der Post-Treatment-Zeitraum ist sehr kurz. Außerdem liegt diese Gruppe genau in der problematischsten Phase des Jahres. Deshalb sollte diese Teilstichprobe nicht als starke Bestätigung gelesen werden. Sie zeigt eher die Grenze der Identifikation: Das Paper kann das CNY-Problem sichtbar adressieren und teilweise entschärfen, aber nicht vollständig eliminieren.
+
+Insgesamt stärken die Robustheitsanalysen die Hauptergebnisse, weil der Effekt zeitlich zur Eröffnung passt, bei längeren Pre-Periods erhalten bleibt und auch außerhalb der kritischsten Jahresendperiode sichtbar ist. Die wichtigste Schwachstelle bleibt dennoch das Treatment Timing. Gerade weil viele Eröffnungen nahe an Chinese New Year liegen und Treatment- und Kontrollstädte strukturell unterschiedlich sind, hängt die kausale Interpretation stark davon ab, ob die Saisonalitätskontrollen ausreichend sind.
+
+
+# 7 Heterogene Effekte und Mechanismen
 
 ##### Figure 6
 
@@ -2567,6 +2782,13 @@ p_fig6 <- ggplot(fig6_results, aes(y = -y_position)) +
 p_fig6
 ```
 
+Figure 6 untersucht, ob der Effekt neuer U-Bahn-Linien für unterschiedliche Straßenabschnitte gleich stark ausfällt. Das ist wichtig, weil ein überzeugender Mechanismus nicht nur einen durchschnittlichen Effekt zeigen sollte, sondern auch ein plausibles Muster: Wenn U-Bahnen tatsächlich Straßenverkehr ersetzen, sollte der Effekt vor allem dort sichtbar sein, wo die neue Linie eine realistische Alternative zur Autofahrt bietet und wo zuvor besonders starke Überlastung bestand.
+
+Die Ergebnisse passen grundsätzlich zu dieser Substitutionslogik. Direkt betroffene Straßenabschnitte reagieren stärker als nicht direkt betroffene Straßen. Auch Straßen, die näher an der neuen U-Bahn-Linie liegen, zeigen größere Geschwindigkeitszuwächse als weiter entfernte Straßen. Besonders relevant ist außerdem der Unterschied nach ursprünglicher Überlastung: Auf anfangs stärker congested roads ist der Effekt deutlich größer als auf weniger überlasteten Straßen. Das spricht dafür, dass vor allem dort Verkehr entlastet wird, wo die Staukosten vorher besonders hoch waren und der Wechsel zur U-Bahn für Pendlerinnen und Pendler attraktiver ist.
+
+Auch die weiteren Heterogenitäten stützen den Mechanismus. Der Effekt ist in der Rush Hour stärker als außerhalb der Stoßzeiten und tritt besonders auf Straßen auf, die mit dem Hauptverkehrsfluss belastet sind. Zudem finden die Autoren Hinweise auf Netzwerk- oder Spillover-Effekte: Auch Straßen, die nicht direkt an der neuen Linie liegen, aber näher an bestehenden U-Bahn-Linien sind, können profitieren. Insgesamt zeigt Figure 6 damit, dass der Effekt nicht zufällig über das Straßennetz verteilt ist, sondern dort stärker ausfällt, wo man ihn theoretisch erwarten würde.
+
+# 8 Ökonomische Interpretation
 
 ##### Figure 7
 
@@ -2709,3 +2931,92 @@ ggsave(
   dpi = 300
 )
 ```
+
+Figure 7 übersetzt den empirischen Geschwindigkeitseffekt in eine ökonomische Wohlfahrtslogik. Die Grundidee ist, dass eine neue U-Bahn-Linie zwei Gruppen betrifft. Erstens gibt es Personen, die vom Auto oder Bus zur U-Bahn wechseln. Zweitens gibt es Personen, die weiterhin auf der Straße unterwegs sind, aber durch weniger Stau schneller fahren können. Der empirisch geschätzte DID-Effekt bezieht sich vor allem auf diese zweite Gruppe: Er misst, wie stark sich die Straßengeschwindigkeit nach der U-Bahn-Eröffnung erhöht.
+
+In der Grafik entspricht der Nutzen der verbleibenden Straßennutzerinnen und Straßennutzer der Fläche A. Diese Gruppe gewinnt, weil weniger Verkehr auf der Straße ist und dadurch Reisezeit eingespart wird. Die Fläche B beschreibt den Nutzen der Personen, die zur U-Bahn wechseln. Ob diese Gruppe gewinnt, hängt davon ab, wie sich Reisezeit, monetäre Kosten, Komfort und individuelle Präferenzen zwischen Straße und U-Bahn unterscheiden. Zusätzlich müssen staatliche Ausgaben berücksichtigt werden, etwa Baukosten, Betriebskosten und Subventionen für den öffentlichen Verkehr.
+
+Für Beijing berechnen Gu et al. (2021), dass die reine Zeitersparnis durch höhere Straßengeschwindigkeit pro Auto- oder Buspendelfahrt etwa 0,10 US-Dollar wert ist. Auf aggregierter Ebene ergibt sich daraus ein relevanter Wohlfahrtsgewinn, weil sehr viele Pendelfahrten betroffen sind. Diese Rechnung macht deutlich, dass selbst relativ kleine prozentuale Geschwindigkeitssteigerungen ökonomisch bedeutsam sein können, wenn sie in großen Städten auf Millionen von Fahrten wirken.
+
+# 9 Diskussion und Kritik
+
+Die Studie liefert überzeugende Evidenz dafür, dass neue U-Bahn-Linien kurzfristig die Geschwindigkeit auf betroffenen Straßen erhöhen. Trotzdem bleibt die kausale Interpretation nicht vollständig unproblematisch. Die wichtigsten Kritikpunkte betreffen das Treatment Timing, die Wahl der Kontrollstädte, die Messung über Baidu Maps, die externe Validität sowie die Berechnung des Welfare Impacts.
+
+### Treatment Timing
+
+Das größte Identifikationsproblem liegt im Timing der U-Bahn-Eröffnungen. Viele Linien wurden am Jahresende eröffnet, also in zeitlicher Nähe zu Chinese New Year. Genau in dieser Phase verändern sich Verkehrsmuster in chinesischen Städten stark, weil viele Menschen die großen Städte verlassen und wirtschaftliche Aktivität zurückgeht. Dadurch kann die Straßengeschwindigkeit auch ohne neue U-Bahn-Linie steigen.
+
+Die mögliche Bias-Richtung ist hier relativ klar: Wenn die Treatment-Städte rund um Chinese New Year ohnehin einen stärkeren Verkehrsrückgang erleben als die Kontrollstädte, wird der U-Bahn-Effekt überschätzt. Die Autoren adressieren dieses Problem mit Saisonalitätskontrollen, Placebo-Tests und Teilstichproben nach Eröffnungszeitpunkt. Diese Robustheitschecks schwächen den Einwand ab, beseitigen ihn aber nicht vollständig. Gerade weil die Eröffnungsdaten administrativ gesetzt werden und stark im Dezember clustern, bleibt Treatment Timing die zentrale Schwachstelle der Studie.
+
+### Kontrollstädte
+
+Ein zweites Problem betrifft die Kontrollgruppe. Die Kontrollstädte sind keine perfekten Gegenfakten für die Treatment-Städte. Das Paper zeigt selbst, dass Treatment-Städte im Durchschnitt deutlich größer und etwas wohlhabender sind als Kontrollstädte. Diese Unterschiede sind nicht nur deskriptiv relevant, sondern können direkt die Identifikation beeinflussen. Größere und reichere Städte haben andere Pendelstrukturen, andere Verkehrsdichte, andere Migrationsmuster und möglicherweise auch andere saisonale Schwankungen.
+
+Die Bias-Richtung ist hier weniger eindeutig als beim CNY-Problem. Wenn größere Städte um Chinese New Year stärker entlastet werden, könnte der Effekt überschätzt werden. Wenn Kontrollstädte dagegen grundsätzlich andere Verkehrstrends oder schlechtere Substitutionsmöglichkeiten haben, könnte der Vergleich auch in andere Richtungen verzerrt sein. Die Fixed Effects und Saisonalitätskontrollen helfen, aber sie können nur beobachtbare oder zeitinvariante Unterschiede kontrollieren. Ein Restrisiko bleibt, dass die Kontrollstädte nicht das passende kontrafaktische Verkehrsmuster für die Treatment-Städte abbilden.
+
+### Messung durch Baidu Maps
+
+Die Nutzung von Baidu-Maps-Daten ist eine große Stärke der Studie, weil sie sehr hochfrequente und räumlich granulare Verkehrsinformationen ermöglicht. Gleichzeitig ist die Messung nicht perfekt. Die Daten basieren auf mobilen Geräten mit aktivierten Standortdiensten und erfassen damit nicht notwendigerweise alle Verkehrsteilnehmer repräsentativ. Wenn sich die Zusammensetzung der Baidu-Nutzer über Zeit oder zwischen Städten unterscheidet, kann dies die gemessene Straßengeschwindigkeit beeinflussen.
+
+Hinzu kommt, dass das Sample räumlich begrenzt ist. Die Analyse konzentriert sich auf Straßenabschnitte innerhalb von 2,5-Kilometer-Bufferzonen um ausgewählte U-Bahn-Linien und besonders auf directly affected road segments. Das ist für die Identifikation sinnvoll, weil dort der Effekt am plausibelsten ist. Für die Interpretation bedeutet es aber, dass der geschätzte Effekt nicht automatisch als citywide Effekt gelesen werden kann. Die Studie zeigt also überzeugender, dass U-Bahnen bestimmte betroffene Straßen entlasten, aber weniger eindeutig, wie stark die gesamte städtische Verkehrsbelastung sinkt.
+
+### Externe Validität und langfristige Effekte
+
+Die Ergebnisse gelten vor allem für chinesische Städte während einer Phase massiven U-Bahn-Ausbaus. Diese Städte hatten starkes Bevölkerungswachstum, steigende Autobesitzraten und häufig hohe Anfangscongestion. In anderen Ländern oder in Städten mit bereits sehr dichten ÖPNV-Netzen können die Effekte anders ausfallen. Auch institutionelle Faktoren wie Stadtplanung, Siedlungsdichte, Autonutzungskosten und Qualität des Busnetzes beeinflussen, ob eine neue U-Bahn-Linie tatsächlich Autofahrten ersetzt.
+
+Außerdem misst die Studie vor allem kurz- bis mittelfristige Effekte im ersten Jahr nach Eröffnung. Langfristig könnten sich Haushalte, Unternehmen und Pendler an die neue Infrastruktur anpassen. Eine bessere U-Bahn-Anbindung kann Wohn- und Arbeitsortentscheidungen verändern, neue Nachfrage erzeugen und zusätzliche Mobilität ermöglichen. Aus Sicht des Fundamental Law of Road Congestion ist daher denkbar, dass ein Teil der Entlastung langfristig durch induzierte Nachfrage wieder abgeschwächt wird. Die Studie kann zeigen, dass U-Bahnen kurzfristig Stau reduzieren, aber sie kann nicht abschließend beweisen, dass dieser Effekt dauerhaft in gleicher Größe bestehen bleibt.
+
+### Welfare-Impact-Berechnung
+
+Die Welfare-Berechnung ist nützlich, weil sie die statistischen Ergebnisse ökonomisch interpretierbar macht. Gleichzeitig ist sie deutlich weniger kausal abgesichert als die Hauptschätzung zur Straßengeschwindigkeit. Der am besten identifizierte Bestandteil ist der Zeitgewinn der verbleibenden Straßennutzerinnen und Straßennutzer. Dieser Teil hängt direkt mit dem geschätzten Geschwindigkeitseffekt zusammen. Die weiteren Bestandteile der Wohlfahrtsrechnung, insbesondere die Gewinne der Personen, die zur U-Bahn wechseln, sowie die staatlichen Kosten und Subventionen, beruhen jedoch stärker auf zusätzlichen Annahmen und ergänzenden Daten.
+
+Kritisch ist vor allem, dass Präferenzen, Komfortunterschiede und tatsächliche Opportunitätskosten der Reisezeit nur approximiert werden können. Die Annahme, dass die monetäre Bewertung der Pendelzeit einem bestimmten Anteil des Lohns entspricht, ist üblich, aber nicht zwingend für alle Pendlergruppen korrekt. Auch die Kosten des U-Bahn-Systems sind schwer vollständig zu erfassen, weil Baukosten, Betriebskosten, Subventionen, Kapazitätsauslastung und langfristige Instandhaltung berücksichtigt werden müssten. Wenn diese Größen falsch angesetzt werden, kann sich die Wohlfahrtsbilanz deutlich verändern.
+
+Zudem bleiben mehrere potenzielle Nutzenkomponenten außerhalb der Berechnung oder werden nur indirekt behandelt, etwa Luftverschmutzung, Lärm, Verkehrssicherheit, Flächennutzung und langfristige Agglomerationseffekte. Das bedeutet nicht, dass die Welfare-Analyse falsch ist. Sie sollte aber eher als Back-of-the-envelope-Interpretation verstanden werden und nicht als präzise Kosten-Nutzen-Analyse. Die Kausalität der Geschwindigkeitswirkung ist deutlich stärker belegt als die Aussage, dass der gesamte Wohlfahrtsnutzen des U-Bahn-Systems seine Kosten übersteigt.
+
+
+# Fazit
+
+# Anhang
+
+### Paketliste
+
+### Vollständige Datensatzliste
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
