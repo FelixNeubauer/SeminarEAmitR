@@ -1058,12 +1058,6 @@ Diese Darstellung ist wichtig für die Parallel-Trends-Annahme. Wenn die behande
 
 ##### Table 5
 
-
-```
-## The variable 'treat' has been removed because of collinearity (see $collin.var).
-## The variable 'treat' has been removed because of collinearity (see $collin.var).
-```
-
 <table class="table5-original table" style="font-size: 18px; font-family: Times New Roman; width: auto !important; margin-left: auto; margin-right: auto;border-bottom: 0;">
 <caption style="font-size: initial !important;">Table 5—Subsamples by Time of Launch</caption>
  <thead>
@@ -1141,13 +1135,6 @@ Table 5 adressiert dieses Problem, indem die Autoren die Linien nach Eröffnungs
 
 ##### Figure 5
 
-```
-## The variable 'post' has been removed because of collinearity (see $collin.var).
-```
-
-```
-## The variables 'post' and 'treat' have been removed because of collinearity (see $collin.var).
-```
 
 ![Grafik selbst erstellt in Anlehnung an Figure 5 aus Gu et. al (2021)](ReplikationSemR_files/figure-html/fig5_combined-1.png)
 
@@ -1162,16 +1149,9 @@ Insgesamt stärken die Robustheitsanalysen die Hauptergebnisse, weil der Effekt 
 
 ##### Figure 6
 
-Für Figure 6 werden entsprechend der Stata-Replikationsdatei `ReplicaCodes/Fig6.do` drei Datensätze benötigt: `Data/ExtendSample.dta` als Hauptdatensatz sowie `Data/WithAgainstTraffic.dta` und `Data/RushNonrusHours.dta` für die beiden Heterogenitätsgruppen nach Fahrtrichtung und Tageszeit.
 
 
-```
-## NOTE: 10,018 observations removed because of NA values (RHS: 10,018).
-```
 
-```
-## NOTE: 10,018 observations removed because of NA values (RHS: 10,018, Fixed-effects: 10,018).
-```
 
 ![Grafik selbst erstellt in Anlehnung an Figure 6 aus Gu et. al (2021)](ReplikationSemR_files/figure-html/fig6_plot-1.png)
 
@@ -1276,7 +1256,7 @@ Die Pakete erfüllen unterschiedliche Funktionen innerhalb des Reports. `haven` 
 
 ### Reproduzierbarkeit
 
-Die Replikation basiert auf den vom Paper bereitgestellten Replikationsdateien. Die ursprünglichen Autoren stellen Datensätze, Stata-Code, Log-Dateien und Ergebnisdateien bereit. Der Originalcode ist in Stata geschrieben; für diesen Report wurden die relevanten Analysen in R nachvollzogen. Ziel war dabei nicht, jede technische Einzelheit des Stata-Codes eins zu eins zu übersetzen, sondern die zentralen Tabellen und Abbildungen mit denselben Daten, Sample-Restriktionen und ökonometrischen Spezifikationen reproduzierbar in R nachzubilden.
+Die Replikation basiert auf den vom Paper bereitgestellten Replikationsdateien. Die ursprünglichen Autoren stellen Datensätze, Stata-Code, Log-Dateien und Ergebnisdateien bereit. Der Originalcode ist in Stata geschrieben; für diesen Report wurden die relevanten Analysen in R nachvollzogen.
 
 Die wichtigsten empirischen Bestandteile des Papers konnten im Rahmen dieser Arbeit repliziert oder nachgebildet werden. Dazu gehören die zentralen deskriptiven Tabellen, die dynamischen Event-Study-Grafiken, die Baseline-Regressionen, mehrere Robustheitsanalysen sowie die heterogenen Effekte nach Straßenmerkmalen. Für Table 1 wurde keine reine Tabellenreplikation erstellt. Stattdessen wurde aus den Informationen zu den U-Bahn-Eröffnungen eine eigene Grafik entwickelt, die das Treatment Timing und insbesondere die Häufung der Eröffnungen rund um Chinese New Year besser sichtbar macht. Figure 7 ist keine empirische Schätzung, sondern eine konzeptionelle Wohlfahrtsgrafik; sie wurde daher nicht als Regressionsergebnis repliziert, sondern für die ökonomische Interpretation grafisch nachgebildet beziehungsweise erläutert.
 
@@ -1284,7 +1264,6 @@ Nicht vollständig reproduzierbar war Table 6. Laut README beruhen die dafür no
 
 Ebenfalls eingeschränkt reproduzierbar sind Teile des ursprünglichen Data Cleaning. Die README verweist darauf, dass zwar Beispiel-Rohdaten und Cleaning-Codes bereitgestellt werden, die vollständigen Original-Rohdaten aber nicht vollständig im Replication Packet enthalten sind. Die vorliegende Replikation setzt daher auf den bereitgestellten Analyse-Datensätzen auf. Das bedeutet: Die Regressions- und Grafikoutputs sind aus den verfügbaren Replikationsdaten nachvollziehbar, aber die vollständige Erzeugung aller Analyse-Datensätze aus den proprietären Rohdaten ist nicht Teil dieser Replikation.
 
-Zur besseren Nachvollziehbarkeit enthält der Anhang eine Übersicht darüber, welche Datensätze, Tabellen und Abbildungen verwendet beziehungsweise repliziert wurden. Außerdem sollten die Session-Informationen der R-Umgebung dokumentiert werden, damit Paketversionen und technische Umgebung transparent bleiben.
 
 
 ```

@@ -2151,7 +2151,7 @@ Diese Darstellung ist wichtig für die Parallel-Trends-Annahme. Wenn die behande
 
 ##### Table 5
 
-```{r table5_subsamples_launch, results='asis', echo=FALSE}
+```{r table5_subsamples_launch, results='asis', echo=FALSE, message=FALSE,warning=FALSE}
 # Replikation von ReplicaCodes/Tab5.do
 # Laut Replication README ist BaseSamp.dta der Basissample-Datensatz für die meisten Hauptergebnisse.
 tab5_data <- BaseSamp_input %>%
@@ -2339,7 +2339,7 @@ Das zentrale Identifikationsproblem der Studie ist das Treatment Timing rund um 
 Table 5 adressiert dieses Problem, indem die Autoren die Linien nach Eröffnungszeitpunkt in Teilstichproben aufteilen. In der engen Spezifikation mit allen Linien und einem kurzen Fenster von sechs Wochen vor bis drei Wochen nach Eröffnung beträgt der Effekt 0.036. Für Linien, die vor dem 31. Januar 2017 eröffnet wurden, liegt der Effekt bei 0.050. Für Linien, die zwischen Februar und November 2017 eröffnet wurden, beträgt er 0.039. Dieser zweite Wert ist besonders wichtig, weil diese Gruppe weniger direkt vom Jahresend- und CNY-Problem betroffen ist. Für Linien nach dem 1. Dezember 2017 fällt der Effekt mit 0.022 kleiner aus und das Konfidenzintervall umfasst null.
 
 ##### Figure 5
-```{r fig5_data, echo=FALSE}
+```{r fig5_data, echo=FALSE, message=FALSE, warning=FALSE}
 # Basissample für die Launch-Time-Subsamples übernehmen
 fig5_base <- BaseSamp_input
 
@@ -2481,9 +2481,9 @@ Insgesamt stärken die Robustheitsanalysen die Hauptergebnisse, weil der Effekt 
 
 ##### Figure 6
 
-Für Figure 6 werden entsprechend der Stata-Replikationsdatei `ReplicaCodes/Fig6.do` drei Datensätze benötigt: `Data/ExtendSample.dta` als Hauptdatensatz sowie `Data/WithAgainstTraffic.dta` und `Data/RushNonrusHours.dta` für die beiden Heterogenitätsgruppen nach Fahrtrichtung und Tageszeit.
 
-```{r fig6_data_and_estimation, echo=FALSE}
+
+```{r fig6_data_and_estimation, echo=FALSE, warning=FALSE, message=FALSE}
 # Stata-ähnliche Hilfsfunktionen für Indikatoren definieren
 fig6_stata_eq <- function(x, value) {
   as.numeric(!is.na(x) & x == value)
