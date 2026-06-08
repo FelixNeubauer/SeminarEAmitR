@@ -2,7 +2,18 @@
 title: "Subways and Road Congestion"
 subtitle: "Seminar Empirische Analysen mit R"
 author: "Felix Neubauer"
-output: html_document
+
+params:
+  viridis_palette: viridis
+
+output:
+  prettydoc::html_pretty:
+    theme: cayman
+    toc: yes
+    keep_md: true
+editor_options: 
+  markdown: 
+    wrap: sentence
 ---
 
 ```{r setup, include=FALSE}
@@ -83,21 +94,6 @@ WithAgainstTraffic_input <- read_dta("Data/WithAgainstTraffic.dta")
 RushNonrusHours_input <- read_dta("Data/RushNonrusHours.dta")
 ```
 
-# Paper
-
-In ihrem Paper *Subways and Road Congestion* untersuchen Yizhen Gu, Chang Jiang, Junfu Zhang und Ben Zou, ob der Ausbau von U-Bahn-Systemen tatsächlich dazu beitragen kann, Straßenverkehr in chinesischen Städten zu entlasten. Die Studie setzt dabei an einem zentralen verkehrsökonomischen Problem an: Viele schnell wachsende Städte leiden unter zunehmendem Stau, gleichzeitig werden U-Bahnen häufig als Lösung zur Reduktion von Verkehrsbelastung betrachtet.
-
-Besonders relevant ist der chinesische Kontext, da China in den vergangenen Jahren einen massiven Ausbau städtischer U-Bahn-Netze erlebt hat. Zwischen 2001 und 2017 stieg die Gesamtlänge der U-Bahn-Linien in China stark an, während gleichzeitig Bevölkerung, Autobesitz und Verkehrsaufkommen in vielen Großstädten zunahmen. Dadurch entsteht ein geeigneter empirischer Rahmen, um den Effekt neuer U-Bahn-Linien auf den Straßenverkehr zu untersuchen.
-
-Für ihre Analyse nutzen die Autoren Daten zu 45 neu eröffneten U-Bahn-Linien in 25 chinesischen Städten im Zeitraum von August 2016 bis Dezember 2017. Diese Informationen kombinieren sie mit hochfrequenten Verkehrsdaten von Baidu Maps, die stündliche Geschwindigkeitsmessungen auf Ebene einzelner Straßenabschnitte enthalten. Dadurch können die Autoren sehr genau beobachten, wie sich die Fahrgeschwindigkeit auf Straßen in der Nähe neuer U-Bahn-Linien vor und nach deren Eröffnung verändert.
-
-Methodisch basiert die Studie auf einem Difference-in-Differences-Ansatz. Dabei werden Straßenabschnitte, die direkt von einer neuen U-Bahn-Linie betroffen sein könnten, mit Kontrollstraßen in Städten verglichen, in denen im Untersuchungszeitraum keine neue U-Bahn-Linie eröffnet wurde. Ziel ist es, den kausalen Effekt der U-Bahn-Eröffnung auf die Verkehrsgeschwindigkeit zu isolieren und allgemeine zeitliche Entwicklungen oder saisonale Muster möglichst herauszurechnen.
-
-Die Autoren kommen zu dem Ergebnis, dass neue U-Bahn-Linien den Straßenverkehr zumindest kurzfristig messbar entlasten. Im ersten Jahr nach der Eröffnung steigt die Geschwindigkeit auf direkt betroffenen Straßen während der Stoßzeiten um durchschnittlich etwa vier Prozent. Der Effekt ist besonders ausgeprägt auf zuvor stark überlasteten Straßen und nimmt mit zunehmender Entfernung zur neuen U-Bahn-Linie ab. Ergänzende Analysen aus Beijing deuten außerdem darauf hin, dass eine bessere U-Bahn-Anbindung mit mehr U-Bahn-Fahrten sowie weniger Bus- und Autofahrten verbunden ist.
-
-# Was ist das
-
-Die Grafik zeigt den massiven Ausbau des chinesischen U-Bahn-Systems seit den frühen 2000er Jahren: Während 2001 nur 4 Städte ein U-Bahn-System hatten, waren es 2017 bereits 30 Städte. Parallel dazu stieg die gesamte Streckenlänge stark an, auf fast 5.000 km, und auch die Fahrgastzahlen wuchsen auf rund 16 Milliarden Fahrten pro Jahr. Für das Paper ist diese Entwicklung zentral, weil der U-Bahn-Boom viele Neueröffnungen in kurzer Zeit erzeugt und damit überhaupt erst eine empirische Analyse über mehrere Städte ermöglicht.
 
 # 0 Überblick
 
@@ -2975,13 +2971,59 @@ Kritisch ist vor allem, dass Präferenzen, Komfortunterschiede und tatsächliche
 Zudem bleiben mehrere potenzielle Nutzenkomponenten außerhalb der Berechnung oder werden nur indirekt behandelt, etwa Luftverschmutzung, Lärm, Verkehrssicherheit, Flächennutzung und langfristige Agglomerationseffekte. Das bedeutet nicht, dass die Welfare-Analyse falsch ist. Sie sollte aber eher als Back-of-the-envelope-Interpretation verstanden werden und nicht als präzise Kosten-Nutzen-Analyse. Die Kausalität der Geschwindigkeitswirkung ist deutlich stärker belegt als die Aussage, dass der gesamte Wohlfahrtsnutzen des U-Bahn-Systems seine Kosten übersteigt.
 
 
-# Fazit
 
-# Anhang
+
+# 10 Fazit
+
+Die Replikation bestätigt die zentralen empirischen Ergebnisse von Gu et al. (2021) qualitativ. Die wichtigsten Tabellen und Abbildungen zu den Haupteffekten, Robustheitsanalysen und heterogenen Effekten konnten in R nachgebildet werden. Zusätzlich wurde aus den Informationen zu den Eröffnungszeitpunkten der U-Bahn-Linien eine eigene Grafik erstellt, um das Treatment Timing visuell klarer darzustellen. Diese eigene Darstellung macht besonders deutlich, dass sich viele Eröffnungen am Jahresende und damit in zeitlicher Nähe zu Chinese New Year häufen.
+
+Inhaltlich spricht die Replikation dafür, dass neue U-Bahn-Linien kurzfristig die Straßengeschwindigkeit auf betroffenen Straßenabschnitten erhöhen. Die Hauptergebnisse liegen je nach Spezifikation ungefähr im Bereich von 3,6 bis 4,4 Prozent und bleiben auch in mehreren Robustheitschecks positiv. Besonders überzeugend ist, dass die dynamischen Effekte erst nach der Eröffnung sichtbar werden und dass stärker betroffene, stärker überlastete und näher an der neuen Linie gelegene Straßen größere Effekte zeigen. Dieses Muster passt zur ökonomischen Substitutionslogik: Wenn Pendlerinnen und Pendler vom Auto oder Bus zur U-Bahn wechseln, sollten vor allem jene Straßen entlastet werden, auf denen zuvor hohe Staukosten bestanden.
+
+Trotzdem ist die kausale Interpretation nicht vollständig unangreifbar. Die größte Schwachstelle bleibt das Treatment Timing. Viele Linien wurden in einer Periode eröffnet, in der sich Verkehrsmuster in chinesischen Städten aufgrund von Chinese New Year ohnehin stark verändern. Außerdem unterscheiden sich Treatment- und Kontrollstädte systematisch in Größe und Wohlstand. Die Autoren kontrollieren diese Probleme mit Fixed Effects, Saisonalitätsanpassungen, Placebo-Tests und Teilstichprobenanalysen. Diese Strategien machen die Ergebnisse plausibler, können aber nicht vollständig beweisen, dass alle zeitgleichen saisonalen oder administrativen Effekte ausgeschlossen sind.
+
+Auch die ökonomische Interpretation sollte vorsichtig gelesen werden. Der geschätzte Geschwindigkeitseffekt ist relativ gut identifiziert, aber die daraus abgeleitete Welfare-Berechnung beruht auf zusätzlichen Annahmen über Zeitwerte, Pendelverhalten, Kosten des U-Bahn-Systems und Verhaltensanpassungen. Deshalb ist die Aussage, dass U-Bahn-Ausbau Straßen kurzfristig entlastet, deutlich stärker abgesichert als die weitergehende Aussage, dass der gesamte Wohlfahrtsnutzen die Kosten des Systems übersteigt.
+
+Ein idealer Datensatz für zukünftige Forschung würde zufälligere oder zumindest weniger saisonal gebündelte Eröffnungszeitpunkte enthalten, Treatment- und Kontrollstädte besser vergleichbar machen und den gesamten Stadtverkehr statt nur ausgewählter Bufferzonen abbilden. Zusätzlich wären langfristige Daten über mehrere Jahre hilfreich, um zu prüfen, ob die Entlastung dauerhaft bestehen bleibt oder durch induzierte Nachfrage, Umzüge, neue Pendelmuster und steigenden Autobesitz wieder abgeschwächt wird. Insgesamt sind die Ergebnisse damit plausibel und empirisch gut dokumentiert, aber nicht vollständig frei von Identifikationsrisiken.
+
+# 11 Anhang
 
 ### Paketliste
 
-### Vollständige Datensatzliste
+Für die Replikation und Darstellung der Ergebnisse wurden folgende R-Pakete verwendet:
+
+
+- haven
+- dplyr
+- ggplot2
+- tidyr
+- grid
+- lubridate
+- knitr
+- kableExtra
+- fixest
+- broom
+- purrr
+- patchwork
+- readr
+
+
+Die Pakete erfüllen unterschiedliche Funktionen innerhalb des Reports. `haven` wurde zum Einlesen der Stata-Datensätze verwendet. Die Datenaufbereitung erfolgte vor allem mit `dplyr`, `tidyr`, `lubridate`, `purrr` und `readr`. Für die Regressionsschätzungen wurde `fixest` genutzt, da damit Fixed-Effects-Modelle effizient geschätzt werden können. Die grafische Darstellung erfolgte überwiegend mit `ggplot2`, `grid` und `patchwork`. Tabellen wurden mit `knitr` und `kableExtra` erstellt und formatiert; teilweise wurde zusätzlich CSS eingesetzt, um die Tabellen und Abbildungen optisch näher an die Darstellung im Paper anzupassen. Das war vor allem dort notwendig, wo eine rein standardisierte R-Ausgabe nicht ausreichte, um ein gut lesbares und mit dem Original vergleichbares HTML-Ergebnis zu erzeugen.
+
+### Reproduzierbarkeit
+
+Die Replikation basiert auf den vom Paper bereitgestellten Replikationsdateien. Die ursprünglichen Autoren stellen Datensätze, Stata-Code, Log-Dateien und Ergebnisdateien bereit. Der Originalcode ist in Stata geschrieben; für diesen Report wurden die relevanten Analysen in R nachvollzogen.
+
+Die wichtigsten empirischen Bestandteile des Papers konnten im Rahmen dieser Arbeit repliziert oder nachgebildet werden. Dazu gehören die zentralen deskriptiven Tabellen, die dynamischen Event-Study-Grafiken, die Baseline-Regressionen, mehrere Robustheitsanalysen sowie die heterogenen Effekte nach Straßenmerkmalen. Für Table 1 wurde keine reine Tabellenreplikation erstellt. Stattdessen wurde aus den Informationen zu den U-Bahn-Eröffnungen eine eigene Grafik entwickelt, die das Treatment Timing und insbesondere die Häufung der Eröffnungen rund um Chinese New Year besser sichtbar macht. Figure 7 ist keine empirische Schätzung, sondern eine konzeptionelle Wohlfahrtsgrafik; sie wurde daher nicht als Regressionsergebnis repliziert, sondern für die ökonomische Interpretation grafisch nachgebildet beziehungsweise erläutert.
+
+Nicht vollständig reproduzierbar war Table 6. Laut README beruhen die dafür notwendigen Datensätze `IndModeSample.dta` und `HhdVKTSample.dta` auf restricted-use Microdaten der Beijing Household Travel Surveys und sind nicht im Replication Packet enthalten. Table 6 kann deshalb mit den öffentlich bereitgestellten Replikationsdateien nicht vollständig repliziert werden.
+
+Ebenfalls eingeschränkt reproduzierbar sind Teile des ursprünglichen Data Cleaning. Die README verweist darauf, dass zwar Beispiel-Rohdaten und Cleaning-Codes bereitgestellt werden, die vollständigen Original-Rohdaten aber nicht vollständig im Replication Packet enthalten sind. Die vorliegende Replikation setzt daher auf den bereitgestellten Analyse-Datensätzen auf. Das bedeutet: Die Regressions- und Grafikoutputs sind aus den verfügbaren Replikationsdaten nachvollziehbar, aber die vollständige Erzeugung aller Analyse-Datensätze aus den proprietären Rohdaten ist nicht Teil dieser Replikation.
+
+
+```{r session-info, echo=FALSE}
+sessionInfo()
+```
+
 
 
 
