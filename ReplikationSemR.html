@@ -1235,7 +1235,7 @@ großen Städten abreisen und sich die Verkehrsbelastung auch ohne neue
 U-Bahn-Linie verändern kann.</p>
 <div id="table-2" class="section level5">
 <h5>Table 2</h5>
-<table class="table2-original table" style="font-size: 18px; font-family: Times New Roman; width: auto !important; margin-left: auto; margin-right: auto;border-bottom: 0;">
+<table class="table2-original replicated-original-table table" style="font-size: 18px; font-family: Times New Roman; width: auto !important; margin-left: auto; margin-right: auto;border-bottom: 0;">
 <thead>
 <tr>
 <th style="empty-cells: hide;border-bottom:hidden;" colspan="1">
@@ -1595,6 +1595,55 @@ between 6 weeks before and 48 weeks after line opening.
 <p><em>Grafik selbst erstellt in Anlehnung an Table 2 aus Gu et. al
 (2021).</em></p>
 <style type="text/css">
+/*
+Die Tabellen ab Table 2 replizieren bewusst das Original-Layout des Papers.
+prettydoc/html_pretty formatiert alle Tabellen innerhalb von `.main-content`
+pauschal grün/grau. Diese Regeln werden hier nur für die replizierten Tabellen
+überschrieben, damit frühere Überblickstabellen weiterhin das prettydoc-Design
+behalten.
+*/
+.main-content table.replicated-original-table,
+.main-content table.replicated-original-table.table {
+  width: auto !important;
+  color: #000 !important;
+  background: transparent !important;
+  border-left: none !important;
+  border-right: none !important;
+  box-shadow: none !important;
+  --bs-table-bg: transparent !important;
+  --bs-table-color: #000 !important;
+  --bs-table-accent-bg: transparent !important;
+  --bs-table-striped-bg: transparent !important;
+  --bs-table-striped-color: #000 !important;
+  --bs-table-hover-bg: transparent !important;
+  --bs-table-hover-color: #000 !important;
+}
+
+.main-content table.replicated-original-table tr,
+.main-content table.replicated-original-table tr:nth-child(odd),
+.main-content table.replicated-original-table tr:nth-child(even),
+.main-content table.replicated-original-table thead tr,
+.main-content table.replicated-original-table tbody tr,
+.main-content table.replicated-original-table tfoot tr,
+.main-content table.replicated-original-table.table-hover > tbody > tr:hover,
+.main-content table.replicated-original-table.table-striped > tbody > tr:nth-of-type(odd) {
+  color: #000 !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+}
+
+.main-content table.replicated-original-table.table > :not(caption) > * > *,
+.main-content table.replicated-original-table caption,
+.main-content table.replicated-original-table th,
+.main-content table.replicated-original-table td {
+  color: #000 !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+}
 
 .table2-original {
 width: 1000px !important;
@@ -1949,7 +1998,7 @@ Spezifikation ist.</p>
 <h3>Baseline Regression</h3>
 <div id="table-3" class="section level5">
 <h5>Table 3</h5>
-<table class="table3-original table" style="font-size: 18px; font-family: Times New Roman; width: auto !important; margin-left: auto; margin-right: auto;border-bottom: 0;">
+<table class="table3-original replicated-original-table table" style="font-size: 18px; font-family: Times New Roman; width: auto !important; margin-left: auto; margin-right: auto;border-bottom: 0;">
 <caption style="font-size: initial !important;">
 Table 3—Baseline Estimates
 </caption>
@@ -2208,7 +2257,7 @@ zeitgleicher Confounder.</p>
 <h3>Längere Pre-Period und Difference-in-Discontinuity</h3>
 <div id="table-4" class="section level5">
 <h5>Table 4</h5>
-<table class="table4-original table" style="font-size: 18px; font-family: Times New Roman; width: auto !important; margin-left: auto; margin-right: auto;border-bottom: 0;">
+<table class="table4-original replicated-original-table table" style="font-size: 18px; font-family: Times New Roman; width: auto !important; margin-left: auto; margin-right: auto;border-bottom: 0;">
 <caption style="font-size: initial !important;">
 Table 4—Varying the Length of the Pre-Period
 </caption>
@@ -2490,7 +2539,7 @@ endgültiger Beweis perfekter Paralleltrends.</p>
 <h3>Das CNY-Problem</h3>
 <div id="table-5" class="section level5">
 <h5>Table 5</h5>
-<table class="table5-original table" style="font-size: 18px; font-family: Times New Roman; width: auto !important; margin-left: auto; margin-right: auto;border-bottom: 0;">
+<table class="table5-original replicated-original-table table" style="font-size: 18px; font-family: Times New Roman; width: auto !important; margin-left: auto; margin-right: auto;border-bottom: 0;">
 <caption style="font-size: initial !important;">
 Table 5—Subsamples by Time of Launch
 </caption>
