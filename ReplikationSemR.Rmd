@@ -1361,7 +1361,7 @@ kable(
 ```
 
 
-```{r table2_figma, echo=FALSE, message=FALSE, warning=FALSE, results='asis'}
+```{r table2_figma, echo=FALSE, include=FALSE, message=FALSE, warning=FALSE, results='asis'}
 # Vereinfachte Table-2-Version für Figma:
 # Nur Mittelwerte, getrennt nach treated und control cities.
 

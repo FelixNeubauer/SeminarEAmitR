@@ -554,6 +554,40 @@ Die deskriptiven Statistiken sind für die Studie methodisch besonders wichtig. 
 <span style="font-style: italic;">Notes:</span> <sup></sup> Data in panel A are from the 2017 Statistical Yearbook of Chinese Cities. In panel B, each observation is a road segment-by-week-to-opening. Segments in the baseline regression sample are included. Treated road segments are those directly affected by the new subway lines. Week-to-opening is between 6 weeks before and 48 weeks after line opening.</td></tr></tfoot>
 </table>
 
+
+<table class="table2-figma table" style="font-size: 18px; font-family: Times New Roman; width: auto !important; margin-left: auto; margin-right: auto;border-bottom: 0;">
+ <thead>
+  <tr>
+   <th style="text-align:left;font-weight: bold;"> Mittelwert von </th>
+   <th style="text-align:center;font-weight: bold;"> Treated cities </th>
+   <th style="text-align:center;font-weight: bold;"> Control cities </th>
+  </tr>
+ </thead>
+<tbody>
+  <tr>
+   <td style="text-align:left;width: 260px; "> Bevölkerung (Mio.) </td>
+   <td style="text-align:center;width: 160px; "> 8.68 </td>
+   <td style="text-align:center;width: 160px; "> 3.81 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;width: 260px; "> BIP pro Kopf (yuan) </td>
+   <td style="text-align:center;width: 160px; "> 105,597 </td>
+   <td style="text-align:center;width: 160px; "> 95,674 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;width: 260px; "> Durchschnittsgeschwindigkeit (km/h) </td>
+   <td style="text-align:center;width: 160px; "> 31.76 </td>
+   <td style="text-align:center;width: 160px; "> 31.48 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;width: 260px; "> Congestion index </td>
+   <td style="text-align:center;width: 160px; "> 1.69 </td>
+   <td style="text-align:center;width: 160px; "> 1.7 </td>
+  </tr>
+</tbody>
+<tfoot><tr><td style="padding: 0; " colspan="100%">
+<sup></sup> </td></tr></tfoot>
+</table>
 *Grafik selbst erstellt in Anlehnung an Table 2 aus Gu et. al (2021).*
 
 <style type="text/css">
