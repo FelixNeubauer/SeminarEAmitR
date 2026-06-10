@@ -1316,7 +1316,7 @@ kable(
     "",
     "Mean", "p25", "Median", "p75"
   ),
-  table.attr = 'class="table2-original"'
+  table.attr = 'class="table2-original replicated-original-table"'
 ) %>%
   add_header_above(
     setNames(
@@ -1430,6 +1430,55 @@ kable(
 *Grafik selbst erstellt in Anlehnung an Table 2 aus Gu et. al (2021).*
 
 ```{css, echo=FALSE}
+/*
+Die Tabellen ab Table 2 replizieren bewusst das Original-Layout des Papers.
+prettydoc/html_pretty formatiert alle Tabellen innerhalb von `.main-content`
+pauschal grün/grau. Diese Regeln werden hier nur für die replizierten Tabellen
+überschrieben, damit frühere Überblickstabellen weiterhin das prettydoc-Design
+behalten.
+*/
+.main-content table.replicated-original-table,
+.main-content table.replicated-original-table.table {
+  width: auto !important;
+  color: #000 !important;
+  background: transparent !important;
+  border-left: none !important;
+  border-right: none !important;
+  box-shadow: none !important;
+  --bs-table-bg: transparent !important;
+  --bs-table-color: #000 !important;
+  --bs-table-accent-bg: transparent !important;
+  --bs-table-striped-bg: transparent !important;
+  --bs-table-striped-color: #000 !important;
+  --bs-table-hover-bg: transparent !important;
+  --bs-table-hover-color: #000 !important;
+}
+
+.main-content table.replicated-original-table tr,
+.main-content table.replicated-original-table tr:nth-child(odd),
+.main-content table.replicated-original-table tr:nth-child(even),
+.main-content table.replicated-original-table thead tr,
+.main-content table.replicated-original-table tbody tr,
+.main-content table.replicated-original-table tfoot tr,
+.main-content table.replicated-original-table.table-hover > tbody > tr:hover,
+.main-content table.replicated-original-table.table-striped > tbody > tr:nth-of-type(odd) {
+  color: #000 !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+}
+
+.main-content table.replicated-original-table.table > :not(caption) > * > *,
+.main-content table.replicated-original-table caption,
+.main-content table.replicated-original-table th,
+.main-content table.replicated-original-table td {
+  color: #000 !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+}
 
 /* Grundlayout */
 .table2-original {
@@ -1868,7 +1917,7 @@ kableExtra::kbl(
   col.names = c("", "<span>(1)</span>", "<span>(2)</span>", "<span>(3)</span>"),
   escape = FALSE,
   caption = "Table 3—Baseline Estimates",
-  table.attr = 'class="table3-original"'
+  table.attr = 'class="table3-original replicated-original-table"'
 ) %>%
   kableExtra::kable_styling(
     full_width = FALSE,
@@ -2076,7 +2125,7 @@ kbl(
   col.names = c("", "(1)", "(2)", "(3)", "(4)", "(5)", "(6)"),
   escape = FALSE,
   caption = "Table 4—Varying the Length of the Pre-Period",
-  table.attr = 'class="table4-original"'
+  table.attr = 'class="table4-original replicated-original-table"'
 ) %>%
   add_header_above(c(" " = 1, "Length of pre-periods\nNumber of weeks before launch" = 3, "Discontinuity around the launch\nTreatment-specific time trend polynomial" = 3)) %>%
   add_header_above(c(" " = 1, "12" = 1, "24" = 1, "48" = 1, "Linear" = 1, "Up to third" = 1, "Up to fifth" = 1)) %>%
@@ -2367,7 +2416,7 @@ kbl(
   col.names = c("", "All lines<br>(1)", "Before 1/31/17<br>(2)", "2/1/17–11/30/17<br>(3)", "After 12/1/17<br>(4)"),
   escape = FALSE,
   caption = "Table 5—Subsamples by Time of Launch",
-  table.attr = 'class="table5-original"'
+  table.attr = 'class="table5-original replicated-original-table"'
 ) %>%
   kable_styling(
     full_width = FALSE,

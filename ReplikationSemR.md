@@ -407,7 +407,7 @@ Die deskriptiven Statistiken sind für die Studie methodisch besonders wichtig. 
 
 
 
-<table class="table2-original table" style="font-size: 18px; font-family: Times New Roman; width: auto !important; margin-left: auto; margin-right: auto;border-bottom: 0;">
+<table class="table2-original replicated-original-table table" style="font-size: 18px; font-family: Times New Roman; width: auto !important; margin-left: auto; margin-right: auto;border-bottom: 0;">
  <thead>
 <tr>
 <th style="empty-cells: hide;border-bottom:hidden;" colspan="1"></th>
@@ -557,6 +557,55 @@ Die deskriptiven Statistiken sind für die Studie methodisch besonders wichtig. 
 *Grafik selbst erstellt in Anlehnung an Table 2 aus Gu et. al (2021).*
 
 <style type="text/css">
+/*
+Die Tabellen ab Table 2 replizieren bewusst das Original-Layout des Papers.
+prettydoc/html_pretty formatiert alle Tabellen innerhalb von `.main-content`
+pauschal grün/grau. Diese Regeln werden hier nur für die replizierten Tabellen
+überschrieben, damit frühere Überblickstabellen weiterhin das prettydoc-Design
+behalten.
+*/
+.main-content table.replicated-original-table,
+.main-content table.replicated-original-table.table {
+  width: auto !important;
+  color: #000 !important;
+  background: transparent !important;
+  border-left: none !important;
+  border-right: none !important;
+  box-shadow: none !important;
+  --bs-table-bg: transparent !important;
+  --bs-table-color: #000 !important;
+  --bs-table-accent-bg: transparent !important;
+  --bs-table-striped-bg: transparent !important;
+  --bs-table-striped-color: #000 !important;
+  --bs-table-hover-bg: transparent !important;
+  --bs-table-hover-color: #000 !important;
+}
+
+.main-content table.replicated-original-table tr,
+.main-content table.replicated-original-table tr:nth-child(odd),
+.main-content table.replicated-original-table tr:nth-child(even),
+.main-content table.replicated-original-table thead tr,
+.main-content table.replicated-original-table tbody tr,
+.main-content table.replicated-original-table tfoot tr,
+.main-content table.replicated-original-table.table-hover > tbody > tr:hover,
+.main-content table.replicated-original-table.table-striped > tbody > tr:nth-of-type(odd) {
+  color: #000 !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+}
+
+.main-content table.replicated-original-table.table > :not(caption) > * > *,
+.main-content table.replicated-original-table caption,
+.main-content table.replicated-original-table th,
+.main-content table.replicated-original-table td {
+  color: #000 !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+}
 
 /* Grundlayout */
 .table2-original {
@@ -822,7 +871,7 @@ Panels B und C dienen als Vergleichsspezifikationen mit Two-way Fixed Effects. P
 
 ##### Table 3
 
-<table class="table3-original table" style="font-size: 18px; font-family: Times New Roman; width: auto !important; margin-left: auto; margin-right: auto;border-bottom: 0;">
+<table class="table3-original replicated-original-table table" style="font-size: 18px; font-family: Times New Roman; width: auto !important; margin-left: auto; margin-right: auto;border-bottom: 0;">
 <caption style="font-size: initial !important;">Table 3—Baseline Estimates</caption>
  <thead>
   <tr>
@@ -941,7 +990,7 @@ Der Test ist allerdings keine vollständige Lösung aller Identifikationsproblem
 
 ##### Table 4
 
-<table class="table4-original table" style="font-size: 18px; font-family: Times New Roman; width: auto !important; margin-left: auto; margin-right: auto;border-bottom: 0;">
+<table class="table4-original replicated-original-table table" style="font-size: 18px; font-family: Times New Roman; width: auto !important; margin-left: auto; margin-right: auto;border-bottom: 0;">
 <caption style="font-size: initial !important;">Table 4—Varying the Length of the Pre-Period</caption>
  <thead>
 <tr>
@@ -1058,7 +1107,7 @@ Diese Darstellung ist wichtig für die Parallel-Trends-Annahme. Wenn die behande
 
 ##### Table 5
 
-<table class="table5-original table" style="font-size: 18px; font-family: Times New Roman; width: auto !important; margin-left: auto; margin-right: auto;border-bottom: 0;">
+<table class="table5-original replicated-original-table table" style="font-size: 18px; font-family: Times New Roman; width: auto !important; margin-left: auto; margin-right: auto;border-bottom: 0;">
 <caption style="font-size: initial !important;">Table 5—Subsamples by Time of Launch</caption>
  <thead>
   <tr>
