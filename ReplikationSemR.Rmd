@@ -1714,7 +1714,7 @@ Die Hauptergebnisse zeigen, dass neue U-Bahn-Linien die Straßengeschwindigkeit 
 ### Dynamische Effekte um die U-Bahn-Eröffnung
 
 ##### Figure 2
-```{r fig2_data, echo=FALSE}
+```{r fig2_data, echo=FALSE, dpi=300}
 # Basissample auf das Event-Study-Fenster begrenzen
 base_samp <- BaseSamp_input %>%
   filter(between(wk2open, -6, 47))
