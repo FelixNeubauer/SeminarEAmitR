@@ -1807,30 +1807,30 @@ plot_fig2_panel <- function(df, panel_title) {
 }
 
 p_fig2_a <- plot_fig2_panel(fig2_a_df, "Panel A. Stacked DID")
-p_fig2_b <- plot_fig2_panel(fig2_b_df, "Panel B. Two-way fixed effects, not accounting for seasonality")
-p_fig2_c <- plot_fig2_panel(fig2_c_df, "Panel C. Two-way fixed effects, accounting for seasonality")
+p_fig2_b <- plot_fig2_panel(fig2_b_df, "Panel B. Two-way fixed effects,\nnot accounting for seasonality")
+p_fig2_c <- plot_fig2_panel(fig2_c_df, "Panel C. Two-way fixed effects,\naccounting for seasonality")
 ```
 
 
-```{r fig2_panel_a, include=FALSE, fig.width=7, fig.height=4.5, fig.cap='Grafik selbst erstellt in Anlehnung an Figure 2 aus Gu et. al (2021)'}
+```{r fig2_panel_a, include=FALSE, dpi=300, fig.width=7, fig.height=4.5, fig.cap='Grafik selbst erstellt in Anlehnung an Figure 2 aus Gu et. al (2021)'}
 # Panel A separat ausgeben
 p_fig2_a
 ```
 
 
-```{r fig2_panel_b, include=FALSE, fig.width=7, fig.height=4.5, fig.cap='Grafik selbst erstellt in Anlehnung an Figure 2 aus Gu et. al (2021)'}
+```{r fig2_panel_b, include=FALSE, dpi=300, fig.width=7, fig.height=4.5, fig.cap='Grafik selbst erstellt in Anlehnung an Figure 2 aus Gu et. al (2021)'}
 # Panel B separat ausgeben
 p_fig2_b
 ```
 
 
-```{r fig2_panel_c, include=FALSE, fig.width=7, fig.height=4.5, fig.cap='Grafik selbst erstellt in Anlehnung an Figure 2 aus Gu et. al (2021)'}
+```{r fig2_panel_c, include=FALSE, dpi=300, fig.width=7, fig.height=4.5, fig.cap='Grafik selbst erstellt in Anlehnung an Figure 2 aus Gu et. al (2021)'}
 # Panel C separat ausgeben
 p_fig2_c
 ```
 
 
-```{r fig2_combined, echo=FALSE, fig.width=10, fig.height=7.5, fig.cap='Grafik selbst erstellt in Anlehnung an Figure 2 aus Gu et. al (2021)'}
+```{r fig2_combined, echo=FALSE, dpi=300, fig.width=10, fig.height=7.5, fig.cap='Grafik selbst erstellt in Anlehnung an Figure 2 aus Gu et. al (2021)'}
 # Drei Panels zu einer Abbildung kombinieren
 (
   (p_fig2_a | p_fig2_b) /
@@ -1929,9 +1929,8 @@ kableExtra::kbl(
   kableExtra::footnote(
     general = paste0(
       "The dependent variable is weekly average residual speed. ",
-      "Standard errors are in parentheses. ",
-      "This table is computed by replicating the estimation logic in ReplicaCodes/Tab3.do ",
-      "directly in R (same sample restrictions and FE structure)."
+      "Standard errors are in parentheses, clustered at the group level in column 1, ",
+      "clustered at the subway line level in columns 2 and 3."
     ),
     general_title = "Notes:",
     footnote_as_chunk = TRUE,
@@ -1999,7 +1998,7 @@ fig3_df <- map_dfr(seq_along(fig3_placebo_weeks), function(n) {
   filter(between(wk2open, -47, 47))
 ```
 
-```{r fig3_plot, echo=FALSE, fig.cap='Grafik selbst erstellt in Anlehnung an Figure 3 aus Gu et. al (2021)'}
+```{r fig3_plot, echo=FALSE, fig.cap='Grafik selbst erstellt in Anlehnung an Figure 3 aus Gu et. al (2021)',dpi=300}
 # Darstellung analog zum Stata-Graphen in Fig3.do
 p_fig3 <- ggplot(fig3_df, aes(x = wk2open, y = wald_stat)) +
   geom_hline(yintercept = 1:5, color = "#B0B4B8", linewidth = 0.8) +
@@ -2029,6 +2028,16 @@ p_fig3 <- ggplot(fig3_df, aes(x = wk2open, y = wald_stat)) +
   )
 
 p_fig3
+```
+
+```{r fig3_save_figma, include=FALSE}
+# Grafik als PNG speichern
+ggsave(
+  filename = "FertigeGrafiken/Fig3_R_Figma.png",
+  plot = p_fig3
+)
+
+
 ```
 
 Figure 3 untersucht, ob der geschätzte Effekt tatsächlich rund um die reale U-Bahn-Eröffnung auftritt oder ob er auch bei künstlich verschobenen Eröffnungszeitpunkten sichtbar wäre. Dafür wird das Modell wiederholt mit Placebo Opening Dates geschätzt, also mit fiktiven Treatment-Zeitpunkten vor und nach der tatsächlichen Eröffnung. Für jede dieser Schätzungen wird die Wald-Statistik des zentralen Treatment-Koeffizienten dargestellt.
@@ -2098,7 +2107,9 @@ tab4_models <- list(tab4_mod1, tab4_mod2, tab4_mod3, tab4_mod4, tab4_mod5, tab4_
 fmt_coef <- function(m) sprintf("%.3f", coef(m)[["TP"]])
 fmt_se <- function(m) sprintf("(%.3f)", sqrt(vcov(m)[["TP", "TP"]]))
 fmt_n <- function(m) formatC(nobs(m), format = "d", big.mark = ",")
+```
 
+```{r table4_output, results='asis', echo=FALSE}
 # Ergebnistabelle für Table 4 zusammenbauen
 table4 <- tibble::tibble(
   term = c(
@@ -2127,8 +2138,8 @@ kbl(
   caption = "Table 4—Varying the Length of the Pre-Period",
   table.attr = 'class="table4-original replicated-original-table"'
 ) %>%
-  add_header_above(c(" " = 1, "Length of pre-periods\nNumber of weeks before launch" = 3, "Discontinuity around the launch\nTreatment-specific time trend polynomial" = 3)) %>%
   add_header_above(c(" " = 1, "12" = 1, "24" = 1, "48" = 1, "Linear" = 1, "Up to third" = 1, "Up to fifth" = 1)) %>%
+  add_header_above(c(" " = 1, "Length of pre-periods\nNumber of weeks before launch" = 3, "Discontinuity around the launch\nTreatment-specific time trend polynomial" = 3)) %>%
   kable_styling(
     full_width = FALSE,
     position = "center",
@@ -2158,6 +2169,7 @@ kbl(
   font-weight: normal !important;
 }
 ```
+
 
 
 
@@ -2232,7 +2244,7 @@ fig4_df <- tibble(
 )
 ```
 
-```{r fig4_plot, echo=FALSE, fig.cap='Grafik selbst erstellt in Anlehnung an Figure 4 aus Gu et. al (2021)'}
+```{r fig4_plot, echo=FALSE, fig.cap='Grafik selbst erstellt in Anlehnung an Figure 4 aus Gu et. al (2021)', dpi=300}
 # Darstellung analog zu Figure 4 (Longer Pre-Treatment Periods)
 p_fig4 <- ggplot(fig4_df, aes(x = wk2open, y = coef)) +
   geom_hline(yintercept = c(-0.05, 0, 0.05, 0.10), color = "#B0B4B8", linewidth = 0.6) +
@@ -2455,7 +2467,7 @@ Das zentrale Identifikationsproblem der Studie ist das Treatment Timing rund um 
 Table 5 adressiert dieses Problem, indem die Autoren die Linien nach Eröffnungszeitpunkt in Teilstichproben aufteilen. In der engen Spezifikation mit allen Linien und einem kurzen Fenster von sechs Wochen vor bis drei Wochen nach Eröffnung beträgt der Effekt 0.036. Für Linien, die vor dem 31. Januar 2017 eröffnet wurden, liegt der Effekt bei 0.050. Für Linien, die zwischen Februar und November 2017 eröffnet wurden, beträgt er 0.039. Dieser zweite Wert ist besonders wichtig, weil diese Gruppe weniger direkt vom Jahresend- und CNY-Problem betroffen ist. Für Linien nach dem 1. Dezember 2017 fällt der Effekt mit 0.022 kleiner aus und das Konfidenzintervall umfasst null.
 
 ##### Figure 5
-```{r fig5_data, echo=FALSE, message=FALSE, warning=FALSE}
+```{r fig5_data, echo=FALSE, message=FALSE, warning=FALSE, dpi=300}
 # Basissample für die Launch-Time-Subsamples übernehmen
 fig5_base <- BaseSamp_input
 
@@ -2559,7 +2571,7 @@ p_fig5_a <- plot_fig5_panel(
 
 p_fig5_b <- plot_fig5_panel(
   fig5_b_df,
-  "Panel B. Lines launched between February 1, 2017 and November 30, 2017",
+  "Panel B. Lines launched between February 1, 2017\nand November 30, 2017",
   x_breaks = seq(-20, 20, 4),
   x_limits = c(-20, 20),
   y_breaks = seq(-0.10, 0.15, 0.05)
@@ -2574,7 +2586,7 @@ p_fig5_c <- plot_fig5_panel(
 )
 ```
 
-```{r fig5_combined, echo=FALSE, fig.width=10, fig.height=7.5, fig.cap='Grafik selbst erstellt in Anlehnung an Figure 5 aus Gu et. al (2021)'}
+```{r fig5_combined, echo=FALSE, fig.width=10, fig.height=7.5, fig.cap='Grafik selbst erstellt in Anlehnung an Figure 5 aus Gu et. al (2021)', dpi=300}
 # Drei Panels zu einer Abbildung kombinieren
 (
   (p_fig5_a | p_fig5_b) /
@@ -2584,6 +2596,23 @@ p_fig5_c <- plot_fig5_panel(
     widths = c(1, 1),
     heights = c(1, 1)
   )
+```
+
+```{r fig5_save_figma, include=FALSE, fig.width=10, fig.height=7.5, dpi=300}
+# Grafik als PNG speichern
+ggsave(
+  filename = "FertigeGrafiken/Fig5_R_Figma.png",
+  plot = (
+  (p_fig5_a | p_fig5_b) /
+  (p_fig5_c | plot_spacer())
+) +
+  plot_layout(
+    widths = c(1, 1),
+    heights = c(1, 1)
+  )
+)
+
+
 ```
 
 Figure 5 zeigt die entsprechenden dynamischen Effekte für die drei Eröffnungsgruppen. Panel A und Panel B liefern relativ klare positive Effekte nach der Eröffnung. Besonders Panel B ist für die Identifikation relevant, weil die dort betrachteten Eröffnungen außerhalb der stark problematischen Jahresendperiode liegen. Dass auch hier positive Effekte sichtbar sind, spricht gegen die Interpretation, dass das gesamte Hauptergebnis nur durch Chinese-New-Year-Saisonalität entsteht.
@@ -2849,7 +2878,7 @@ fig6_results <- bind_rows(
   )
 ```
 
-```{r fig6_plot, echo=FALSE, fig.width=7.4, fig.height=7.4, fig.cap='Grafik selbst erstellt in Anlehnung an Figure 6 aus Gu et. al (2021)'}
+```{r fig6_plot, echo=FALSE, fig.width=7.4, fig.height=7.4, fig.cap='Grafik selbst erstellt in Anlehnung an Figure 6 aus Gu et. al (2021)', dpi=300}
 # Achsenlabels aus den Ergebniszeilen übernehmen
 fig6_axis_labels <- fig6_results$label
 names(fig6_axis_labels) <- -fig6_results$y_position
@@ -2942,7 +2971,7 @@ fig7_curve_data <- tibble(x = seq(0, 1, length.out = 200)) %>%
   )
 ```
 
-```{r fig7_plot, echo=FALSE, fig.width=7.2, fig.height=5.7, fig.cap='Grafik selbst erstellt in Anlehnung an Figure 7 aus Gu et. al (2021)'}
+```{r fig7_plot, echo=FALSE, fig.width=7.2, fig.height=5.7, fig.cap='Grafik selbst erstellt in Anlehnung an Figure 7 aus Gu et. al (2021)', dpi=300}
 # Theoretische Wohlfahrtsgrafik zeichnen
 p_fig7 <- ggplot() +
   geom_polygon(
@@ -3016,8 +3045,22 @@ p_fig7 <- ggplot() +
   annotate("text", x = 0.71, y = 0.88, label = "u[a] + Delta*u[a] + xi[ia]", parse = TRUE, family = "serif", size = 3.4)+
   annotate("text", x = 0.19, y = -0.05, label = "N[s]", parse = TRUE, family = "serif", size = 3.6) +
   annotate("text", x = 0.86, y = -0.05, label = "N[a]", parse = TRUE, family = "serif", size = 3.6) +
-  annotate("text",x = 0.19,y = 0.04,label = "xi[is] * ' ↑ relative to ' * xi[ia]",parse = TRUE,family = "serif",size = 3.25) +
-  annotate("text",x = 0.86,y = 0.04,label = "xi[ia] * ' ↑ relative to ' * xi[is]",parse = TRUE,family = "serif",size = 3.25) +
+  #annotate("text",x = 0.19,y = 0.04,label = "xi[is] * ' ↑ relative to ' * xi[ia]",parse = TRUE,family = "serif",size = 3.25) +
+  #annotate("text",x = 0.86,y = 0.04,label = "xi[ia] * ' ↑ relative to ' * xi[is]",parse = TRUE,family = "serif",size = 3.25) +
+
+  annotate("text",
+         x = 0.19, y = 0.04,
+         label = "xi[is] > xi[ia]",
+         parse = TRUE,
+         family = "serif",
+         size = 3.25) +
+
+  annotate("text",
+         x = 0.86, y = 0.04,
+         label = "xi[ia] > xi[is]",
+         parse = TRUE,
+         family = "serif",
+         size = 3.25) +
   
   labs(
     x = NULL,

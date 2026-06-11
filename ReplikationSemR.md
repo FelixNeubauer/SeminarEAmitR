@@ -555,39 +555,7 @@ Die deskriptiven Statistiken sind für die Studie methodisch besonders wichtig. 
 </table>
 
 
-<table class="table2-figma table" style="font-size: 18px; font-family: Times New Roman; width: auto !important; margin-left: auto; margin-right: auto;border-bottom: 0;">
- <thead>
-  <tr>
-   <th style="text-align:left;font-weight: bold;"> Mittelwert von </th>
-   <th style="text-align:center;font-weight: bold;"> Treated cities </th>
-   <th style="text-align:center;font-weight: bold;"> Control cities </th>
-  </tr>
- </thead>
-<tbody>
-  <tr>
-   <td style="text-align:left;width: 260px; "> Bevölkerung (Mio.) </td>
-   <td style="text-align:center;width: 160px; "> 8.68 </td>
-   <td style="text-align:center;width: 160px; "> 3.81 </td>
-  </tr>
-  <tr>
-   <td style="text-align:left;width: 260px; "> BIP pro Kopf (yuan) </td>
-   <td style="text-align:center;width: 160px; "> 105,597 </td>
-   <td style="text-align:center;width: 160px; "> 95,674 </td>
-  </tr>
-  <tr>
-   <td style="text-align:left;width: 260px; "> Durchschnittsgeschwindigkeit (km/h) </td>
-   <td style="text-align:center;width: 160px; "> 31.76 </td>
-   <td style="text-align:center;width: 160px; "> 31.48 </td>
-  </tr>
-  <tr>
-   <td style="text-align:left;width: 260px; "> Congestion index </td>
-   <td style="text-align:center;width: 160px; "> 1.69 </td>
-   <td style="text-align:center;width: 160px; "> 1.7 </td>
-  </tr>
-</tbody>
-<tfoot><tr><td style="padding: 0; " colspan="100%">
-<sup></sup> </td></tr></tfoot>
-</table>
+
 *Grafik selbst erstellt in Anlehnung an Table 2 aus Gu et. al (2021).*
 
 <style type="text/css">
@@ -978,7 +946,7 @@ Panels B und C dienen als Vergleichsspezifikationen mit Two-way Fixed Effects. P
   </tr>
 </tbody>
 <tfoot><tr><td style="padding: 0; " colspan="100%">
-<span style="font-style: italic;">Notes:</span> <sup></sup> The dependent variable is weekly average residual speed. Standard errors are in parentheses. This table is computed by replicating the estimation logic in ReplicaCodes/Tab3.do directly in R (same sample restrictions and FE structure).</td></tr></tfoot>
+<span style="font-style: italic;">Notes:</span> <sup></sup> The dependent variable is weekly average residual speed. Standard errors are in parentheses, clustered at the group level in column 1, clustered at the subway line level in columns 2 and 3.</td></tr></tfoot>
 </table>
 
 *Grafik selbst erstellt in Anlehnung an Table 3 aus Gu et. al (2021).*
@@ -1014,6 +982,8 @@ Die Hauptergebnisse sprechen für einen positiven Effekt neuer U-Bahn-Linien auf
 
 ![Grafik selbst erstellt in Anlehnung an Figure 3 aus Gu et. al (2021)](ReplikationSemR_files/figure-html/fig3_plot-1.png)
 
+
+
 Figure 3 untersucht, ob der geschätzte Effekt tatsächlich rund um die reale U-Bahn-Eröffnung auftritt oder ob er auch bei künstlich verschobenen Eröffnungszeitpunkten sichtbar wäre. Dafür wird das Modell wiederholt mit Placebo Opening Dates geschätzt, also mit fiktiven Treatment-Zeitpunkten vor und nach der tatsächlichen Eröffnung. Für jede dieser Schätzungen wird die Wald-Statistik des zentralen Treatment-Koeffizienten dargestellt.
 
 Die Logik ist einfach: Wenn der Effekt nur durch allgemeine Trends oder saisonale Bewegungen getrieben wäre, müsste die stärkste Evidenz nicht zwingend genau beim echten Eröffnungszeitpunkt liegen. In Figure 3 liegt die Wald-Statistik jedoch klar am höchsten in der Nähe von Woche 0, also beim tatsächlichen Opening Date. Danach fällt sie deutlich ab. Das spricht dafür, dass der geschätzte Effekt zeitlich eng mit der U-Bahn-Eröffnung verbunden ist.
@@ -1024,9 +994,16 @@ Der Test ist allerdings keine vollständige Lösung aller Identifikationsproblem
 
 ##### Table 4
 
+
+
 <table class="table4-original replicated-original-table table" style="font-size: 18px; font-family: Times New Roman; width: auto !important; margin-left: auto; margin-right: auto;border-bottom: 0;">
 <caption style="font-size: initial !important;">Table 4—Varying the Length of the Pre-Period</caption>
  <thead>
+<tr>
+<th style="empty-cells: hide;border-bottom:hidden;" colspan="1"></th>
+<th style="border-bottom:hidden;padding-bottom:0; padding-left:3px;padding-right:3px;text-align: center; " colspan="3"><div style="border-bottom: 1px solid #ddd; padding-bottom: 5px; ">Length of pre-periods<br>Number of weeks before launch</div></th>
+<th style="border-bottom:hidden;padding-bottom:0; padding-left:3px;padding-right:3px;text-align: center; " colspan="3"><div style="border-bottom: 1px solid #ddd; padding-bottom: 5px; ">Discontinuity around the launch<br>Treatment-specific time trend polynomial</div></th>
+</tr>
 <tr>
 <th style="empty-cells: hide;border-bottom:hidden;" colspan="1"></th>
 <th style="border-bottom:hidden;padding-bottom:0; padding-left:3px;padding-right:3px;text-align: center; " colspan="1"><div style="border-bottom: 1px solid #ddd; padding-bottom: 5px; ">12</div></th>
@@ -1035,11 +1012,6 @@ Der Test ist allerdings keine vollständige Lösung aller Identifikationsproblem
 <th style="border-bottom:hidden;padding-bottom:0; padding-left:3px;padding-right:3px;text-align: center; " colspan="1"><div style="border-bottom: 1px solid #ddd; padding-bottom: 5px; ">Linear</div></th>
 <th style="border-bottom:hidden;padding-bottom:0; padding-left:3px;padding-right:3px;text-align: center; " colspan="1"><div style="border-bottom: 1px solid #ddd; padding-bottom: 5px; ">Up to third</div></th>
 <th style="border-bottom:hidden;padding-bottom:0; padding-left:3px;padding-right:3px;text-align: center; " colspan="1"><div style="border-bottom: 1px solid #ddd; padding-bottom: 5px; ">Up to fifth</div></th>
-</tr>
-<tr>
-<th style="empty-cells: hide;border-bottom:hidden;" colspan="1"></th>
-<th style="border-bottom:hidden;padding-bottom:0; padding-left:3px;padding-right:3px;text-align: center; " colspan="3"><div style="border-bottom: 1px solid #ddd; padding-bottom: 5px; ">Length of pre-periods<br>Number of weeks before launch</div></th>
-<th style="border-bottom:hidden;padding-bottom:0; padding-left:3px;padding-right:3px;text-align: center; " colspan="3"><div style="border-bottom: 1px solid #ddd; padding-bottom: 5px; ">Discontinuity around the launch<br>Treatment-specific time trend polynomial</div></th>
 </tr>
   <tr>
    <th style="text-align:left;">  </th>
