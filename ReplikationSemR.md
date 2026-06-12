@@ -25,8 +25,6 @@ editor_options:
 
 # 0 Überblick
 
-### Zusammenfassung
-
 In ihrem Paper *Subways and Road Congestion* untersuchen Yizhen Gu, Chang Jiang, Junfu Zhang und Ben Zou, ob der Ausbau von U-Bahn-Systemen tatsächlich dazu beitragen kann, Straßenverkehr in chinesischen Städten zu entlasten. Die Studie setzt dabei an einem zentralen verkehrsökonomischen Problem an: Viele schnell wachsende Städte leiden unter zunehmendem Stau, gleichzeitig werden U-Bahnen häufig als Lösung zur Reduktion von Verkehrsbelastung betrachtet.
 
 Besonders relevant ist der chinesische Kontext, da China in den vergangenen Jahren einen massiven Ausbau städtischer U-Bahn-Netze erlebt hat. Zwischen 2001 und 2017 stieg die Gesamtlänge der U-Bahn-Linien in China stark an, während gleichzeitig Bevölkerung, Autobesitz und Verkehrsaufkommen in vielen Großstädten zunahmen. Dadurch entsteht ein geeigneter empirischer Rahmen, um den Effekt neuer U-Bahn-Linien auf den Straßenverkehr zu untersuchen.
@@ -35,29 +33,9 @@ Für ihre Analyse nutzen die Autoren Daten zu 45 neu eröffneten U-Bahn-Linien i
 
 Methodisch basiert die Studie auf einem Difference-in-Differences-Ansatz. Dabei werden Straßenabschnitte, die direkt von einer neuen U-Bahn-Linie betroffen sein könnten, mit Kontrollstraßen in Städten verglichen, in denen im Untersuchungszeitraum keine neue U-Bahn-Linie eröffnet wurde. Ziel ist es, den kausalen Effekt der U-Bahn-Eröffnung auf die Verkehrsgeschwindigkeit zu isolieren und allgemeine zeitliche Entwicklungen oder saisonale Muster möglichst herauszurechnen.
 
-##### Zentrale Ergebnisse
+#### Zentrale Ergebnisse
 
 Die Autoren kommen zu dem Ergebnis, dass neue U-Bahn-Linien den Straßenverkehr zumindest kurzfristig messbar entlasten. Im ersten Jahr nach der Eröffnung steigt die Geschwindigkeit auf direkt betroffenen Straßen während der Stoßzeiten um durchschnittlich etwa vier Prozent. Der Effekt ist besonders ausgeprägt auf zuvor stark überlasteten Straßen und nimmt mit zunehmender Entfernung zur neuen U-Bahn-Linie ab. Ergänzende Analysen aus Beijing deuten außerdem darauf hin, dass eine bessere U-Bahn-Anbindung mit mehr U-Bahn-Fahrten sowie weniger Bus- und Autofahrten verbunden ist.
-
-### Replikationsumfang
-
-Der Replikationsumfang umfasst einen großen Teil der zentralen empirischen Analysen des Papers. Repliziert wurden sowohl die deskriptiven Grundlagen der Studie als auch das Hauptergebnis, die dynamischen Effekte, mehrere Robustheits- und Timing-Checks sowie die heterogenen Effekte nach Straßenmerkmalen. Table 1 wurde nicht als empirische Tabelle repliziert, sondern als eigene Grafik auf Basis der tabellarischen Linienauflistung visualisiert, um das Treatment Timing und das CNY-Problem anschaulicher darzustellen. Table 6 konnte dagegen nicht repliziert werden, weil die dafür benötigten Individual- und Haushaltsdaten nicht im Replikationspaket enthalten waren. Figure 7 wurde ohne Datengrundlage nachgebildet, da es sich um eine schematische Darstellung der ökonomischen Interpretation handelt.
-
-| Element  | Status                       | Rolle im Report                                                                                        |
-| -------- | ---------------------------- | ------------------------------------------------------------------------------------------------------ |
-| Figure 1 | repliziert                   | Kontext: chinesischer U-Bahn-Boom                                                                      |
-| Figure 2 | repliziert                   | Dynamisches Hauptergebnis / Event-Study-Darstellung                                                    |
-| Figure 3 | repliziert                   | Placebo Timing / Robustheit                                                                            |
-| Figure 4 | repliziert                   | Längerer Pre-Treatment-Zeitraum / Pre-Trend-Robustheit                                                 |
-| Figure 5 | repliziert                   | Timing-Robustheit / CNY-Problematik                                                                    |
-| Figure 6 | repliziert                   | Heterogene Effekte / Mechanismus und Robustheit                                                        |
-| Figure 7 | ohne Daten repliziert        | Schematische ökonomische Interpretation                                                                |
-| Table 1  | Grafik basierend auf Tabelle | Treatment Timing und CNY-Problem                                                                       |
-| Table 2  | repliziert                   | Deskriptive Unterschiede zwischen Treatment und Control                                                |
-| Table 3  | repliziert                   | Statisches Hauptergebnis / Baseline-Schätzung                                                          |
-| Table 4  | repliziert                   | Robustheit gegenüber längeren Pre-Periods und Discontinuity-Spezifikationen                            |
-| Table 5  | repliziert                   | Subsamples nach Opening-Zeitpunkt / Timing-Robustheit                                                  |
-| Table 6  | nicht repliziert             | Substitution zwischen Verkehrsmitteln; nicht repliziert, da die benötigten Daten nicht vorhanden waren |
 
 
 
@@ -1095,6 +1073,7 @@ Der Test ist allerdings keine vollständige Lösung aller Identifikationsproblem
 
 
 
+
 Table 4 prüft, ob die Ergebnisse davon abhängen, dass die Baseline-Spezifikation nur die letzten sechs Wochen vor der Eröffnung als Pre-Period verwendet. Das ist relevant, weil eine kurze Pre-Period zwar Bauarbeiten kurz vor der Eröffnung ausblenden soll, aber gleichzeitig weniger Informationen über mögliche längerfristige Trends liefert. Die Autoren wiederholen die Schätzung deshalb mit längeren Pre-Periods von 12, 24 und 48 Wochen.
 
 Die Ergebnisse bleiben in diesen Spezifikationen sehr ähnlich. Der geschätzte Effekt liegt bei 0.043, 0.039 und 0.039 und damit nahe am Baseline-Ergebnis. Das spricht dagegen, dass der Haupteffekt nur durch die enge Wahl des Pre-Treatment-Fensters entsteht. Gleichzeitig zeigt der zweite Teil der Tabelle Difference-in-Discontinuity-Spezifikationen mit flexiblen Treatment-spezifischen Zeittrends. Auch hier bleibt der Effekt positiv, fällt aber bei flexibleren Trends kleiner aus: von 0.042 bei linearem Trend auf 0.028 beziehungsweise 0.023 bei Polynomen höherer Ordnung. Das ist grundsätzlich beruhigend, zeigt aber auch, dass die genaue Effektgröße nicht völlig unabhängig von der Modellierung zeitlicher Trends ist.
@@ -1104,6 +1083,9 @@ Die Ergebnisse bleiben in diesen Spezifikationen sehr ähnlich. Der geschätzte 
 
 
 ![Grafik selbst erstellt in Anlehnung an Figure 4 aus Gu et. al (2021)](ReplikationSemR_files/figure-html/fig4_plot-1.png)
+
+
+
 
 Figure 4 ergänzt diese Evidenz grafisch. Sie zeigt die dynamischen Koeffizienten für ein deutlich längeres Zeitfenster von bis zu 48 Wochen vor und nach der U-Bahn-Eröffnung. Vor der Eröffnung schwanken die Koeffizienten überwiegend um null und zeigen keinen klaren positiven Vortrend. Direkt nach der Eröffnung steigen die Koeffizienten an und bleiben in der Post-Period überwiegend positiv.
 
@@ -1192,6 +1174,8 @@ Table 5 adressiert dieses Problem, indem die Autoren die Linien nach Eröffnungs
 
 
 ![Grafik selbst erstellt in Anlehnung an Figure 5 aus Gu et. al (2021)](ReplikationSemR_files/figure-html/fig5_combined-1.png)
+
+
 
 Figure 5 zeigt die entsprechenden dynamischen Effekte für die drei Eröffnungsgruppen. Panel A und Panel B liefern relativ klare positive Effekte nach der Eröffnung. Besonders Panel B ist für die Identifikation relevant, weil die dort betrachteten Eröffnungen außerhalb der stark problematischen Jahresendperiode liegen. Dass auch hier positive Effekte sichtbar sind, spricht gegen die Interpretation, dass das gesamte Hauptergebnis nur durch Chinese-New-Year-Saisonalität entsteht.
 
@@ -1319,6 +1303,24 @@ Nicht vollständig reproduzierbar war Table 6. Laut README beruhen die dafür no
 
 Ebenfalls eingeschränkt reproduzierbar sind Teile des ursprünglichen Data Cleaning. Die README verweist darauf, dass zwar Beispiel-Rohdaten und Cleaning-Codes bereitgestellt werden, die vollständigen Original-Rohdaten aber nicht vollständig im Replication Packet enthalten sind. Die vorliegende Replikation setzt daher auf den bereitgestellten Analyse-Datensätzen auf. Das bedeutet: Die Regressions- und Grafikoutputs sind aus den verfügbaren Replikationsdaten nachvollziehbar, aber die vollständige Erzeugung aller Analyse-Datensätze aus den proprietären Rohdaten ist nicht Teil dieser Replikation.
 
+| Element  | Status                       | Rolle im Report                                                                                        |
+| -------- | ---------------------------- | ------------------------------------------------------------------------------------------------------ |
+| Figure 1 | repliziert                   | Kontext: chinesischer U-Bahn-Boom                                                                      |
+| Figure 2 | repliziert                   | Dynamisches Hauptergebnis / Event-Study-Darstellung                                                    |
+| Figure 3 | repliziert                   | Placebo Timing / Robustheit                                                                            |
+| Figure 4 | repliziert                   | Längerer Pre-Treatment-Zeitraum / Pre-Trend-Robustheit                                                 |
+| Figure 5 | repliziert                   | Timing-Robustheit / CNY-Problematik                                                                    |
+| Figure 6 | repliziert                   | Heterogene Effekte / Mechanismus und Robustheit                                                        |
+| Figure 7 | ohne Daten repliziert        | Schematische ökonomische Interpretation                                                                |
+| Table 1  | Grafik basierend auf Tabelle | Treatment Timing und CNY-Problem                                                                       |
+| Table 2  | repliziert                   | Deskriptive Unterschiede zwischen Treatment und Control                                                |
+| Table 3  | repliziert                   | Statisches Hauptergebnis / Baseline-Schätzung                                                          |
+| Table 4  | repliziert                   | Robustheit gegenüber längeren Pre-Periods und Discontinuity-Spezifikationen                            |
+| Table 5  | repliziert                   | Subsamples nach Opening-Zeitpunkt / Timing-Robustheit                                                  |
+| Table 6  | nicht repliziert             | Substitution zwischen Verkehrsmitteln; nicht repliziert, da die benötigten Daten nicht vorhanden waren |
+
+
+### Session Info
 
 
 ```
