@@ -596,7 +596,7 @@ data_grafik1_monat <- data_table1_input %>%
     ),
     
     line_status = case_when(
-      panel == "Panel A" ~ "Newly opened lines\nAug 2016–Dec 2017",
+      panel == "Panel A" ~ "Newly opened lines\nAug 2016-Dec 2017",
       panel %in% c("Panel B", "Panel C") & opening_year <= 2017 ~ "Existing lines\nopening year ≤ 2017",
       panel %in% c("Panel B", "Panel C") & opening_year >= 2018 ~ "Planned lines\nopening year ≥ 2018",
       TRUE ~ NA_character_
@@ -605,7 +605,7 @@ data_grafik1_monat <- data_table1_input %>%
     line_status = factor(
       line_status,
       levels = c(
-        "Newly opened lines\nAug 2016–Dec 2017",
+        "Newly opened lines\nAug 2016-Dec 2017",
         "Existing lines\nopening year ≤ 2017",
         "Planned lines\nopening year ≥ 2018"
       )
@@ -695,7 +695,7 @@ plot_data_grafik1_monat <- ggplot(
   scale_shape_manual(
     name = "\nStatus",
     values = c(
-      "Newly opened lines\nAug 2016–Dec 2017" = 21,
+      "Newly opened lines\nAug 2016-Dec 2017" = 21,
       "Existing lines\nopening year ≤ 2017" = 22,
       "Planned lines\nopening year ≥ 2018" = 24
     ),
@@ -2415,7 +2415,7 @@ kbl(
   table5,
   format = "html",
   align = c("l", rep("c", 4)),
-  col.names = c("", "All lines<br>(1)", "Before 1/31/17<br>(2)", "2/1/17–11/30/17<br>(3)", "After 12/1/17<br>(4)"),
+  col.names = c("", "All lines<br>(1)", "Before 1/31/17<br>(2)", "2/1/17-11/30/17<br>(3)", "After 12/1/17<br>(4)"),
   escape = FALSE,
   caption = "Table 5—Subsamples by Time of Launch",
   table.attr = 'class="table5-original replicated-original-table"'
